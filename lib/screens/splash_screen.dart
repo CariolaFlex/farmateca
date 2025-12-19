@@ -1,13 +1,13 @@
-// lib/screens/auth/splash_screen.dart
+// lib/screens/splash_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:animate_do/animate_do.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/onboarding_provider.dart';
-import '../../utils/constants.dart';
+import 'dart:async';
+
+import '../config/app_config.dart';
+import '../utils/app_colors.dart';
+import '../providers/onboarding_provider.dart';
 import 'onboarding_screen.dart';
-import 'auth/login_screen.dart';
 import 'home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -17,184 +17,172 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+
   @override
   void initState() {
     super.initState();
-    _navigateAfterSplash();
+
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.65, curve: Curves.easeIn),
+      ),
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.65, curve: Curves.easeOutBack),
+      ),
+    );
+
+    _controller.forward();
+    _initializeApp();
   }
 
-  Future<void> _navigateAfterSplash() async {
-    await Future.delayed(AppDurations.splash);
+  Future<void> _initializeApp() async {
+    await Future.delayed(const Duration(milliseconds: 2500));
 
-    // Verificar si el widget sigue montado
     if (!mounted) return;
 
-    final onboardingProvider = Provider.of<OnboardingProvider>(
-      context,
-      listen: false,
-    );
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final onboardingProvider = Provider.of<OnboardingProvider>(context, listen: false);
 
-    // Determinar siguiente pantalla
-    Widget nextScreen;
+    if (!mounted) return;
+
     if (!onboardingProvider.isCompleted) {
-      nextScreen = const OnboardingScreen();
-    } else if (authProvider.isAuthenticated) {
-      nextScreen = const HomeScreen();
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => const OnboardingScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
     } else {
-      nextScreen = const LoginScreen();
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
     }
+  }
 
-    // Navegar
-    if (mounted) {
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => nextScreen));
-    }
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-        child: Stack(
-          children: [
-            // Círculo decorativo superior
-            Positioned(
-              top: -100,
-              left: -100,
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withAlpha(13), // 0.05 * 255 = ~13
-                ),
-              ),
-            ),
-            // Círculo decorativo inferior
-            Positioned(
-              bottom: -50,
-              right: -50,
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withAlpha(13),
-                ),
-              ),
-            ),
-            // Contenido central
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Icono animado
-                  FadeInDown(
-                    duration: const Duration(milliseconds: 800),
-                    child: Container(
-                      width: 120,
-                      height: 120,
+      backgroundColor: AppColors.primaryDark,
+      body: Center(
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return Opacity(
+              opacity: _fadeAnimation.value,
+              child: Transform.scale(
+                scale: _scaleAnimation.value,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Isotipo Farmateca
+                    Container(
+                      width: 160,
+                      height: 160,
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(38), // 0.15 * 255 = ~38
-                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(30),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.white.withAlpha(
-                              51,
-                            ), // 0.2 * 255 = ~51
-                            blurRadius: 30,
-                            spreadRadius: 5,
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
                           ),
                         ],
                       ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.local_pharmacy_rounded,
-                          size: 60,
-                          color: Colors.white,
-                        ),
+                      child: Image.asset(
+                        'assets/images/logos/isotipo_farmateca.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.local_pharmacy,
+                            size: 80,
+                            color: AppColors.primaryDark,
+                          );
+                        },
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  // Nombre de la app
-                  FadeInUp(
-                    delay: const Duration(milliseconds: 400),
-                    child: const Text(
-                      AppStrings.appName,
-                      style: TextStyle(
-                        fontSize: 42,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                        letterSpacing: 2,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // Subtítulo
-                  FadeInUp(
-                    delay: const Duration(milliseconds: 600),
-                    child: const Text(
-                      AppStrings.appSubtitle,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white70,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Indicador de carga
-            Positioned(
-              bottom: 80,
-              left: 0,
-              right: 0,
-              child: FadeIn(
-                delay: const Duration(milliseconds: 800),
-                child: const Column(
-                  children: [
-                    SizedBox(
-                      width: 30,
-                      height: 30,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.white54,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 16),
+
+                    const SizedBox(height: 40),
+
+                    // Nombre de la app
                     Text(
-                      'Cargando...',
-                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                      AppConfig.appName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // Tagline
+                    Text(
+                      'Vademécum Farmacológico',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w300,
+                      ),
+                    ),
+
+                    const SizedBox(height: 60),
+
+                    // Indicador de carga
+                    const SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        strokeWidth: 3,
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Versión
+                    Text(
+                      'Versión ${AppConfig.appVersion}',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.5),
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
-            // Versión
-            Positioned(
-              bottom: 20,
-              left: 0,
-              right: 0,
-              child: FadeIn(
-                delay: const Duration(milliseconds: 1000),
-                child: const Text(
-                  AppStrings.appVersion,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white38, fontSize: 12),
-                ),
-              ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
