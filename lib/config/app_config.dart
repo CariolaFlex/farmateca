@@ -37,7 +37,10 @@ class AppConfig {
   static const int dbVersion = 2;
 
   // === Rutas de assets ===
-  static const String jsonAssetPath = 'assets/data/farmateca_master_v2.1.json';
+  /// Ruta al archivo JSON maestro con medicamentos
+  /// IMPORTANTE: Este archivo se actualiza periódicamente pero mantiene el mismo nombre
+  /// para facilitar deployments. La versión se controla en Git commits.
+  static const String jsonAssetPath = 'assets/data/farmateca_master.json';
 
   // === Estadísticas de la base de datos (v2.1) ===
   static const int totalCompuestos = 200;
