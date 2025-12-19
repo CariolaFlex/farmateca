@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:animate_do/animate_do.dart';
 import '../providers/auth_provider.dart';
 import '../utils/app_colors.dart';
 import '../config/app_config.dart';
@@ -8,13 +9,38 @@ import 'favorites_screen.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _breathingController;
+  late Animation<double> _breathingAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Animación de "respiración" para tarjeta principal
+    _breathingController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _breathingAnimation = Tween<double>(begin: 1.0, end: 1.02).animate(
+      CurvedAnimation(parent: _breathingController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _breathingController.dispose();
+    super.dispose();
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -33,11 +59,13 @@ class _HomeScreenState extends State<HomeScreen> {
               // ============================================
               // HEADER: Avatar + Nombre + Settings
               // ============================================
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Avatar + Nombre
-                  Row(
+              FadeInDown(
+                duration: const Duration(milliseconds: 600),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Avatar + Nombre
+                    Row(
                     children: [
                       CircleAvatar(
                         radius: 22,
@@ -89,30 +117,45 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
                 ],
+                ),
               ),
 
               const SizedBox(height: 32),
 
               // ============================================
-              // LOGO + TÍTULO + SUBTÍTULO (Centrado)
+              // LOGO ISOTIPO + TÍTULO + SUBTÍTULO
               // ============================================
-              Center(
-                child: Column(
-                  children: [
-                    // Logo/Isotipo en cuadrado redondeado
-                    Container(
-                      width: 90,
-                      height: 90,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryMedium,
-                        borderRadius: BorderRadius.circular(20),
+              FadeIn(
+                duration: const Duration(milliseconds: 800),
+                child: Center(
+                  child: Column(
+                    children: [
+                      // LOGO REAL DE FARMATECA
+                      Container(
+                        width: 90,
+                        height: 90,
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryMedium,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Image.asset(
+                            'assets/images/logos/isotipo_farmateca.png',
+                            width: 90,
+                            height: 90,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              // Fallback si la imagen no existe
+                              return const Icon(
+                                Icons.local_pharmacy,
+                                color: Colors.white,
+                                size: 50,
+                              );
+                            },
+                          ),
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.local_pharmacy,
-                        color: Colors.white,
-                        size: 50,
-                      ),
-                    ),
 
                     const SizedBox(height: 16),
 
@@ -138,7 +181,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         fontWeight: FontWeight.w400,
                       ),
                     ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
 
@@ -147,46 +191,59 @@ class _HomeScreenState extends State<HomeScreen> {
               // ============================================
               // TÍTULO SECCIÓN
               // ============================================
-              const Text(
-                '¿Qué deseas buscar?',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+              FadeInLeft(
+                duration: const Duration(milliseconds: 600),
+                child: const Text(
+                  '¿Qué deseas buscar?',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
 
               const SizedBox(height: 20),
 
               // ============================================
-              // TARJETAS GRANDES CON GRADIENTES
+              // TARJETAS CON ANIMACIONES
               // ============================================
               Expanded(
                 child: ListView(
                   children: [
-                    // TARJETA 1: Buscar (cyan claro)
-                    _buildGradientCard(
-                      context: context,
-                      title: 'Buscar',
-                      subtitle: 'Busca por nombre comercial o compuesto',
-                      icon: Icons.search,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF00BCD4), Color(0xFF80DEEA)],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
+                    // ==========================================
+                    // TARJETA PRINCIPAL: Buscar (MÁS GRANDE)
+                    // ==========================================
+                    FadeInUp(
+                      duration: const Duration(milliseconds: 800),
+                      child: ScaleTransition(
+                        scale: _breathingAnimation,
+                        child: _buildPrimaryCard(
+                          context: context,
+                          title: 'Buscar',
+                          subtitle: 'Busca por nombre comercial o compuesto',
+                          icon: Icons.search,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const SearchScreen()),
+                            );
+                          },
+                        ),
                       ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const SearchScreen()),
-                        );
-                      },
                     ),
 
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 24), // ← MAYOR SEPARACIÓN
 
-                    // TARJETA 2: Buscar por Compuesto (teal medio)
-                    _buildGradientCard(
+                    // ==========================================
+                    // TARJETAS SECUNDARIAS (MÁS PEQUEÑAS)
+                    // ==========================================
+
+                    // Compuesto
+                    FadeInRight(
+                      duration: const Duration(milliseconds: 600),
+                      delay: const Duration(milliseconds: 100),
+                      child: _buildSecondaryCard(
                       context: context,
                       title: 'Buscar por Compuesto',
                       subtitle: 'Principios activos',
@@ -206,54 +263,66 @@ class _HomeScreenState extends State<HomeScreen> {
                             builder: (_) => const SearchScreen(searchType: 'compuesto'),
                           ),
                         );
-                      },
+                        },
+                      ),
                     ),
 
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12), // ← MENOR SEPARACIÓN
 
-                    // TARJETA 3: Buscar por Marca (teal oscuro)
-                    _buildGradientCard(
-                      context: context,
-                      title: 'Buscar por Marca',
-                      subtitle: 'Marcas comerciales',
-                      icon: Icons.local_offer_outlined,
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.primaryDark,
-                          AppColors.primaryMedium,
-                        ],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
+                    // Marca
+                    FadeInRight(
+                      duration: const Duration(milliseconds: 600),
+                      delay: const Duration(milliseconds: 200),
+                      child: _buildSecondaryCard(
+                        context: context,
+                        title: 'Buscar por Marca',
+                        subtitle: 'Marcas comerciales',
+                        icon: Icons.local_offer_outlined,
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.primaryDark,
+                            AppColors.primaryMedium,
+                          ],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SearchScreen(searchType: 'marca'),
+                            ),
+                          );
+                        },
                       ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const SearchScreen(searchType: 'marca'),
-                          ),
-                        );
-                      },
                     ),
 
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
 
-                    // TARJETA 4: Mis Favoritos (rojo/rosa)
-                    _buildGradientCard(
-                      context: context,
-                      title: 'Mis Favoritos',
-                      subtitle: 'Acceso rápido a medicamentos guardados',
-                      icon: Icons.favorite,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFE91E63), Color(0xFFFF6090)],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
+                    // Favoritos (ROJO PURO)
+                    FadeInRight(
+                      duration: const Duration(milliseconds: 600),
+                      delay: const Duration(milliseconds: 300),
+                      child: _buildSecondaryCard(
+                        context: context,
+                        title: 'Mis Favoritos',
+                        subtitle: 'Acceso rápido a medicamentos guardados',
+                        icon: Icons.favorite,
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFD32F2F), // ← ROJO PURO (no rosado)
+                            Color(0xFFF44336),
+                          ],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const FavoritesScreen()),
+                          );
+                        },
                       ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const FavoritesScreen()),
-                        );
-                      },
                     ),
 
                     const SizedBox(height: 32),
@@ -282,9 +351,109 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// ============================================
-  /// WIDGET: Tarjeta grande con gradiente
+  /// WIDGET: Tarjeta PRINCIPAL (GRANDE Y PREMIUM)
   /// ============================================
-  Widget _buildGradientCard({
+  Widget _buildPrimaryCard({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        splashColor: Colors.white.withValues(alpha: 0.3),
+        highlightColor: Colors.white.withValues(alpha: 0.1),
+        child: Ink(
+          padding: const EdgeInsets.all(22), // ← MÁS PADDING
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [
+                Color(0xFF00D4D4), // ← GRADIENTE DE 3 COLORES
+                Color(0xFF00BCD4),
+                Color(0xFF80DEEA),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.3), // ← BORDE BRILLANTE
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF00BCD4).withValues(alpha: 0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // ÍCONO GRANDE
+              Container(
+                width: 70, // ← MÁS GRANDE
+                height: 70,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  icon,
+                  color: Colors.white,
+                  size: 36,
+                ),
+              ),
+
+              const SizedBox(width: 18),
+
+              // TEXTOS
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 20, // ← MÁS GRANDE
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 14, // ← MÁS GRANDE
+                        color: Colors.white.withValues(alpha: 0.95),
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // FLECHA
+              const Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.white,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// ============================================
+  /// WIDGET: Tarjetas SECUNDARIAS (MÁS PEQUEÑAS)
+  /// ============================================
+  Widget _buildSecondaryCard({
     required BuildContext context,
     required String title,
     required String subtitle,
@@ -296,44 +465,42 @@ class _HomeScreenState extends State<HomeScreen> {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
+        splashColor: Colors.white.withValues(alpha: 0.2),
+        highlightColor: Colors.white.withValues(alpha: 0.1),
         child: Ink(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16), // ← MENOS PADDING
           decoration: BoxDecoration(
             gradient: gradient,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
           child: Row(
             children: [
-              // ============================================
-              // ÍCONO GRANDE en cuadrado semi-transparente
-              // ============================================
+              // ÍCONO MEDIANO
               Container(
-                width: 60,
-                height: 60,
+                width: 50, // ← MÁS PEQUEÑO
+                height: 50,
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   icon,
                   color: Colors.white,
-                  size: 30,
+                  size: 26,
                 ),
               ),
 
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
 
-              // ============================================
-              // TEXTOS (Título + Subtítulo)
-              // ============================================
+              // TEXTOS
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,31 +508,29 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 18,
+                        fontSize: 16, // ← MÁS PEQUEÑO
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.white.withValues(alpha: 0.95),
-                        height: 1.3,
+                        fontSize: 12, // ← MÁS PEQUEÑO
+                        color: Colors.white.withValues(alpha: 0.9),
+                        height: 1.2,
                       ),
                     ),
                   ],
                 ),
               ),
 
-              // ============================================
-              // FLECHA (chevron derecha)
-              // ============================================
+              // FLECHA
               const Icon(
                 Icons.arrow_forward_ios,
                 color: Colors.white,
-                size: 18,
+                size: 16,
               ),
             ],
           ),
