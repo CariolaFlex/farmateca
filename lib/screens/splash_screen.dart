@@ -65,14 +65,14 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _initializeApp() async {
-    // Duración normal del splash
-    await Future.delayed(const Duration(milliseconds: 2500));
+    // Duración del splash
+    await Future.delayed(const Duration(milliseconds: 3500));
 
     if (!mounted) return;
 
     // LOG para debug (si está habilitado)
     if (AppConfig.debugMode) {
-      print('🎨 SPLASH SCREEN: Inicializando app...');
+      debugPrint('🎨 SPLASH SCREEN: Inicializando app...');
     }
 
     // Por ahora ir directo a Home (auth se implementará después)
@@ -117,13 +117,13 @@ class _SplashScreenState extends State<SplashScreen>
                         tag: 'farmateca_logo',
                         child: Image.asset(
                           'assets/images/logos/isotipo_farmateca.png',
-                          width: 200,
-                          height: 200,
+                          width: 280,
+                          height: 280,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
-                              width: 200,
-                              height: 200,
+                              width: 280,
+                              height: 280,
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   begin: Alignment.topLeft,
@@ -133,11 +133,11 @@ class _SplashScreenState extends State<SplashScreen>
                                     AppColors.primaryMedium,
                                   ],
                                 ),
-                                borderRadius: BorderRadius.circular(40),
+                                borderRadius: BorderRadius.circular(60),
                               ),
                               child: const Icon(
                                 Icons.local_pharmacy,
-                                size: 100,
+                                size: 140,
                                 color: Colors.white,
                               ),
                             );
@@ -145,7 +145,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
 
-                      const SizedBox(height: 50),
+                      const SizedBox(height: 24),
 
                     // Nombre de la app
                     Text(
@@ -164,7 +164,7 @@ class _SplashScreenState extends State<SplashScreen>
                     Text(
                       'Vademécum Farmacológico',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                         fontSize: 16,
                         fontWeight: FontWeight.w300,
                       ),
@@ -172,13 +172,53 @@ class _SplashScreenState extends State<SplashScreen>
 
                     const SizedBox(height: 60),
 
-                    // Indicador de carga
-                    const SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        strokeWidth: 3,
+                    // Loading spinner personalizado
+                    SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Círculo exterior
+                          SizedBox(
+                            width: 60,
+                            height: 60,
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white.withValues(alpha: 0.3),
+                              ),
+                              strokeWidth: 2,
+                            ),
+                          ),
+                          // Círculo interior rotando
+                          SizedBox(
+                            width: 45,
+                            height: 45,
+                            child: CircularProgressIndicator(
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                              strokeWidth: 3.5,
+                              strokeCap: StrokeCap.round,
+                            ),
+                          ),
+                          // Punto central
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryLight,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primaryLight.withValues(alpha: 0.6),
+                                  blurRadius: 8,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
 
@@ -188,7 +228,7 @@ class _SplashScreenState extends State<SplashScreen>
                     Text(
                       'Versión ${AppConfig.appVersion}',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.5),
+                        color: Colors.white.withValues(alpha: 0.5),
                         fontSize: 12,
                       ),
                     ),
