@@ -20,6 +20,7 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<double> _pulseAnimation;
+  late Animation<double> _rotationAnimation;
 
   @override
   void initState() {
@@ -33,21 +34,29 @@ class _SplashScreenState extends State<SplashScreen>
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.0, 0.65, curve: Curves.easeIn),
+        curve: const Interval(0.0, 0.7, curve: Curves.easeInOut),
       ),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.0, 0.65, curve: Curves.easeOutBack),
+        curve: const Interval(0.0, 0.7, curve: Curves.elasticOut),
       ),
     );
 
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.65, 1.0, curve: Curves.easeInOut),
+        curve: const Interval(0.7, 1.0, curve: Curves.easeInOut),
+      ),
+    );
+
+    // Rotación sutil para dinamismo
+    _rotationAnimation = Tween<double>(begin: -0.05, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.7, curve: Curves.easeOut),
       ),
     );
 
@@ -96,66 +105,56 @@ class _SplashScreenState extends State<SplashScreen>
           builder: (context, child) {
             return Opacity(
               opacity: _fadeAnimation.value,
-              child: Transform.scale(
-                scale: _scaleAnimation.value * _pulseAnimation.value,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Isotipo Farmateca con diseño mejorado
-                    Container(
-                      width: 140,
-                      height: 140,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.white,
-                            Colors.white.withOpacity(0.9),
-                          ],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.15),
-                            blurRadius: 30,
-                            offset: const Offset(0, 15),
-                            spreadRadius: -5,
-                          ),
-                          BoxShadow(
-                            color: AppColors.primaryLight.withOpacity(0.3),
-                            blurRadius: 40,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Center(
+              child: Transform.rotate(
+                angle: _rotationAnimation.value,
+                child: Transform.scale(
+                  scale: _scaleAnimation.value * _pulseAnimation.value,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Isotipo Farmateca - Diseño minimalista
+                      Hero(
+                        tag: 'farmateca_logo',
                         child: Image.asset(
                           'assets/images/logos/isotipo_farmateca.png',
-                          width: 90,
-                          height: 90,
+                          width: 200,
+                          height: 200,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
-                            return const Icon(
-                              Icons.local_pharmacy,
-                              size: 60,
-                              color: AppColors.primaryDark,
+                            return Container(
+                              width: 200,
+                              height: 200,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    AppColors.primaryLight,
+                                    AppColors.primaryMedium,
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(40),
+                              ),
+                              child: const Icon(
+                                Icons.local_pharmacy,
+                                size: 100,
+                                color: Colors.white,
+                              ),
                             );
                           },
                         ),
                       ),
-                    ),
 
-                    const SizedBox(height: 40),
+                      const SizedBox(height: 50),
 
                     // Nombre de la app
                     Text(
                       AppConfig.appName,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
+                        fontSize: 36,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 2.0,
                       ),
                     ),
 
@@ -196,10 +195,11 @@ class _SplashScreenState extends State<SplashScreen>
                   ],
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
-    );
-  }
+    ),
+  );
+}
 }
