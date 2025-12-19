@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../utils/constants.dart';
+import '../utils/app_colors.dart';
 import '../utils/validators.dart';
+import '../config/app_config.dart';
 
 class CustomTextField extends StatefulWidget {
   final String? label;
@@ -109,9 +110,9 @@ class _CustomTextFieldState extends State<CustomTextField> {
               borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppDimens.radiusM),
+              borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(
-                color: AppColors.primaryBlue,
+                color: AppColors.primaryMedium,
                 width: 2,
               ),
             ),
@@ -297,7 +298,7 @@ class ProfessionDropdown extends StatelessWidget {
               vertical: 16,
             ),
           ),
-          items: AppStrings.professions
+          items: AppConfig.professions
               .map((p) => DropdownMenuItem(value: p, child: Text(p)))
               .toList(),
           onChanged: onChanged,

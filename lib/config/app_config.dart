@@ -67,4 +67,66 @@ class AppConfig {
 
   // === Logs de desarrollo ===
   static const bool showJsonParseLog = true;
+
+  // === Lista de profesiones ===
+  static const List<String> professions = [
+    'Médico',
+    'Enfermera/o',
+    'Matrona/ón',
+    'Químico Farmacéutico',
+    'Estudiante de Medicina',
+    'Estudiante de Enfermería',
+    'Otro',
+  ];
+}
+
+/// ==========================================
+/// DIMENSIONES Y ESPACIADOS
+/// ==========================================
+class AppDimens {
+  // Padding general
+  static const double paddingXS = 4.0;
+  static const double paddingS = 8.0;
+  static const double paddingM = 16.0;
+  static const double paddingL = 24.0;
+  static const double paddingXL = 32.0;
+
+  // Border radius
+  static const double radiusS = 8.0;
+  static const double radiusM = 12.0;
+  static const double radiusL = 16.0;
+  static const double radiusXL = 20.0;
+  static const double radiusCircular = 50.0;
+
+  // Elevaciones
+  static const double elevationS = 2.0;
+  static const double elevationM = 4.0;
+  static const double elevationL = 8.0;
+
+  // Tamaños de iconos
+  static const double iconS = 18.0;
+  static const double iconM = 24.0;
+  static const double iconL = 28.0;
+  static const double iconXL = 40.0;
+  static const double iconXXL = 60.0;
+
+  // Tamaños de fuente
+  static const double fontXS = 10.0;
+  static const double fontS = 12.0;
+  static const double fontM = 14.0;
+  static const double fontL = 16.0;
+  static const double fontXL = 18.0;
+  static const double fontXXL = 24.0;
+  static const double fontTitle = 28.0;
+  static const double fontHero = 32.0;
+}
+
+/// ==========================================
+/// DURACIONES DE ANIMACIÓN
+/// ==========================================
+class AppDurations {
+  static const Duration fast = Duration(milliseconds: 200);
+  static const Duration normal = Duration(milliseconds: 300);
+  static const Duration slow = Duration(milliseconds: 500);
+  static const Duration splash = Duration(milliseconds: 3500);
 }

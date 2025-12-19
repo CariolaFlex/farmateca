@@ -77,4 +77,46 @@ class AppTextStyles {
     fontWeight: FontWeight.bold,
     color: AppColors.premiumGold,
   );
+
+  // === LINKS ===
+  static const TextStyle link = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    color: AppColors.primaryMedium,
+    decoration: TextDecoration.underline,
+  );
+
+  // === CAPTION / OVERLINE ===
+  static const TextStyle caption = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.normal,
+    color: AppColors.textHint,
+  );
+
+  static const TextStyle overline = TextStyle(
+    fontSize: 10,
+    fontWeight: FontWeight.w500,
+    color: AppColors.textHint,
+    letterSpacing: 1.5,
+  );
+
+  // === ESTADOS ===
+  static const TextStyle error = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.normal,
+    color: AppColors.alertRed,
+  );
+
+  static const TextStyle success = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.normal,
+    color: AppColors.successGreen,
+  );
+
+  // === APPBAR ===
+  static const TextStyle appBarTitle = TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w600,
+    color: AppColors.textWhite,
+  );
 }

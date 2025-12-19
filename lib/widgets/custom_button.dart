@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../utils/constants.dart';
+import '../utils/app_colors.dart';
+import '../config/app_config.dart';
 
 class PrimaryButton extends StatelessWidget {
   final String text;
@@ -35,7 +36,7 @@ class PrimaryButton extends StatelessWidget {
         boxShadow: canPress
             ? [
                 BoxShadow(
-                  color: AppColors.primaryBlue.withOpacity(0.3),
+                  color: AppColors.primaryMedium.withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -105,7 +106,7 @@ class SecondaryButton extends StatelessWidget {
       child: OutlinedButton(
         onPressed: isLoading ? null : onPressed,
         style: OutlinedButton.styleFrom(
-          side: BorderSide(color: AppColors.primaryBlue, width: 2),
+          side: BorderSide(color: AppColors.primaryMedium, width: 2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppDimens.radiusM),
           ),
@@ -117,7 +118,7 @@ class SecondaryButton extends StatelessWidget {
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    AppColors.primaryBlue,
+                    AppColors.primaryMedium,
                   ),
                 ),
               )
@@ -125,13 +126,13 @@ class SecondaryButton extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (icon != null) ...[
-                    Icon(icon, color: AppColors.primaryBlue, size: 20),
+                    Icon(icon, color: AppColors.primaryMedium, size: 20),
                     const SizedBox(width: 8),
                   ],
                   Text(
                     text,
                     style: TextStyle(
-                      color: AppColors.primaryBlue,
+                      color: AppColors.primaryMedium,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -168,7 +169,7 @@ class TextLinkButton extends StatelessWidget {
                   TextSpan(
                     text: ' $boldText',
                     style: TextStyle(
-                      color: AppColors.primaryBlue,
+                      color: AppColors.primaryMedium,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -177,7 +178,7 @@ class TextLinkButton extends StatelessWidget {
             )
           : Text(
               text,
-              style: TextStyle(color: AppColors.primaryBlue, fontSize: 14),
+              style: TextStyle(color: AppColors.primaryMedium, fontSize: 14),
             ),
     );
   }

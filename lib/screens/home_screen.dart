@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
-import '../utils/constants.dart';
+import '../utils/app_colors.dart';
+import '../config/app_config.dart';
 import 'search_screen.dart';
 import 'favorites_screen.dart';
 import 'settings_screen.dart';
@@ -17,8 +18,8 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(AppStrings.appName),
-        backgroundColor: AppColors.primaryBlue,
+        title: const Text(AppConfig.appName),
+        backgroundColor: AppColors.primaryDark,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -47,7 +48,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              AppConstants.appTagline,
+              AppConfig.appTagline,
               style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 32),
@@ -120,10 +121,10 @@ class HomeScreen extends StatelessWidget {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: AppColors.primaryBlue.withOpacity(0.1),
+            color: AppColors.primaryLight.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, color: AppColors.primaryBlue),
+          child: Icon(icon, color: AppColors.primaryMedium),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(subtitle, style: TextStyle(color: Colors.grey.shade600)),

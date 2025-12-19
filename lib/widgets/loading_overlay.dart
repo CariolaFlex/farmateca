@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../utils/constants.dart';
+import '../utils/app_colors.dart';
 
 class LoadingOverlay extends StatelessWidget {
   final Widget child;
@@ -37,7 +37,7 @@ class LoadingOverlay extends StatelessWidget {
                       child: CircularProgressIndicator(
                         strokeWidth: 3,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          AppColors.primaryBlue,
+                          AppColors.primaryMedium,
                         ),
                       ),
                     ),

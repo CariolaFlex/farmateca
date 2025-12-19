@@ -11,10 +11,10 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.backgroundLight,
 
       colorScheme: ColorScheme.light(
-        primary: AppColors.primaryDark,
+        primary: AppColors.primaryMedium,
         secondary: AppColors.secondaryLight,
         surface: AppColors.backgroundWhite,
-        error: AppColors.error,
+        error: AppColors.alertRed,
         onPrimary: AppColors.textWhite,
         onSecondary: AppColors.textWhite,
         onSurface: AppColors.textPrimary,
@@ -88,10 +88,10 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.backgroundDark,
 
       colorScheme: ColorScheme.dark(
-        primary: AppColors.primaryDark,
+        primary: AppColors.primaryMedium,
         secondary: AppColors.secondaryLight,
         surface: Color(0xFF1E1E1E),
-        error: AppColors.error,
+        error: AppColors.alertRed,
         onPrimary: AppColors.textWhite,
         onSecondary: AppColors.textWhite,
         onSurface: AppColors.textWhite,
