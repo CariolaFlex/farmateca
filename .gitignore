@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Farmateca - Archivos sensibles y temporales
+backups/
+lib/config/dev_config.dart
+lib/config/*_temp.dart
+lib/config/revenue_cat_keys.dart
+**/api_keys.dart

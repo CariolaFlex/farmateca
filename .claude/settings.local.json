@@ -5,7 +5,11 @@
       "Bash(git config:*)",
       "Bash(git init:*)",
       "Bash(git add:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(mkdir:*)",
+      "Bash(flutter analyze:*)"
     ],
     "deny": [],
     "ask": []

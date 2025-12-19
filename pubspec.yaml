@@ -45,6 +45,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets: 
-    - assets/data/farmateca_master.json
+  assets:
+    - assets/data/farmateca_master_v2.1.json
     
