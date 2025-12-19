@@ -9,7 +9,9 @@
       "Bash(git commit:*)",
       "Bash(git checkout:*)",
       "Bash(mkdir:*)",
-      "Bash(flutter analyze:*)"
+      "Bash(flutter analyze:*)",
+      "Bash(test:*)",
+      "Bash(flutter build:*)"
     ],
     "deny": [],
     "ask": []

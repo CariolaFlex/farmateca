@@ -32,11 +32,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _loadSavedEmail() async {
     final savedEmail = await context.read<AuthProvider>().getLastEmail();
-    if (savedEmail != null && mounted)
+    if (savedEmail != null && mounted) {
       setState(() {
         _emailController.text = savedEmail;
         _rememberMe = true;
       });
+    }
   }
 
   @override

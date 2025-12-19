@@ -4,7 +4,9 @@ class UserModel {
   final String uid;
   final String email;
   final String nombre;
-  final String profesion;
+  final String profesion; // Mantener por compatibilidad con datos existentes
+  final String? nivel; // NUEVO: 'estudiante', 'interno', 'profesional'
+  final String? area; // NUEVO: 'medicina', 'enfermeria', etc.
   final DateTime fechaRegistro;
   final DateTime ultimaSesion;
   final UserPreferences preferencias;
@@ -16,6 +18,8 @@ class UserModel {
     required this.email,
     required this.nombre,
     required this.profesion,
+    this.nivel,
+    this.area,
     required this.fechaRegistro,
     required this.ultimaSesion,
     required this.preferencias,
@@ -25,6 +29,51 @@ class UserModel {
 
   bool get isPremium => suscripcion.isActive;
 
+  /// Obtiene el nombre legible del nivel
+  String get nivelDisplay {
+    switch (nivel) {
+      case 'estudiante':
+        return 'Estudiante';
+      case 'interno':
+        return 'Interno(a)';
+      case 'profesional':
+        return 'Profesional';
+      default:
+        return 'No especificado';
+    }
+  }
+
+  /// Obtiene el nombre legible del área
+  String get areaDisplay {
+    switch (area) {
+      case 'enfermeria':
+        return 'Enfermería';
+      case 'kinesiologia':
+        return 'Kinesiología';
+      case 'medicina':
+        return 'Medicina';
+      case 'nutricion':
+        return 'Nutrición';
+      case 'obstetricia':
+        return 'Obstetricia y puericultura';
+      case 'quimica':
+        return 'Química y farmacia';
+      case 'tens':
+        return 'TENS';
+      case 'otra':
+        return 'Otra';
+      default:
+        return '';
+    }
+  }
+
+  /// Obtiene la profesión completa en formato legible
+  String get profesionCompleta {
+    if (nivel == null) return profesion.isNotEmpty ? profesion : 'No especificado';
+    if (area == null) return nivelDisplay;
+    return '$nivelDisplay de $areaDisplay';
+  }
+
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return UserModel(
@@ -32,6 +81,8 @@ class UserModel {
       email: data['email'] ?? '',
       nombre: data['nombre'] ?? '',
       profesion: data['profesion'] ?? '',
+      nivel: data['nivel'],
+      area: data['area'],
       fechaRegistro:
           (data['fecha_registro'] as Timestamp?)?.toDate() ?? DateTime.now(),
       ultimaSesion:
@@ -50,6 +101,8 @@ class UserModel {
       'email': email,
       'nombre': nombre,
       'profesion': profesion,
+      'nivel': nivel,
+      'area': area,
       'fecha_registro': Timestamp.fromDate(fechaRegistro),
       'ultima_sesion': Timestamp.fromDate(ultimaSesion),
       'preferencias': preferencias.toMap(),
@@ -63,6 +116,8 @@ class UserModel {
     String? email,
     String? nombre,
     String? profesion,
+    String? nivel,
+    String? area,
     DateTime? fechaRegistro,
     DateTime? ultimaSesion,
     UserPreferences? preferencias,
@@ -74,6 +129,8 @@ class UserModel {
       email: email ?? this.email,
       nombre: nombre ?? this.nombre,
       profesion: profesion ?? this.profesion,
+      nivel: nivel ?? this.nivel,
+      area: area ?? this.area,
       fechaRegistro: fechaRegistro ?? this.fechaRegistro,
       ultimaSesion: ultimaSesion ?? this.ultimaSesion,
       preferencias: preferencias ?? this.preferencias,

@@ -4,16 +4,37 @@ import 'package:flutter/material.dart';
 import '../../models/medication_models.dart';
 import '../../utils/constants.dart';
 import '../../services/database_helper.dart';
+import '../../widgets/premium_locked_section.dart';
+import '../paywall_screen.dart';
 import 'compound_detail_screen.dart';
 
-class BrandDetailScreen extends StatelessWidget {
+class BrandDetailScreen extends StatefulWidget {
   final Marca marca;
 
   const BrandDetailScreen({super.key, required this.marca});
 
   @override
+  State<BrandDetailScreen> createState() => _BrandDetailScreenState();
+}
+
+class _BrandDetailScreenState extends State<BrandDetailScreen> {
+  Marca get marca => widget.marca;
+
+  // TODO: Implementar lógica real con RevenueCat cuando esté configurado
+  bool get isUserPremium => false; // Por ahora todos FREE para testing
+
+  void _navigateToPaywall() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PaywallScreen()),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isGenerico = marca.tipoM.toLowerCase().contains('genérico') ||
+        marca.tipoM.toLowerCase().contains('generico');
 
     return Scaffold(
       body: CustomScrollView(
@@ -82,42 +103,31 @@ class BrandDetailScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Badge de acceso y tipo
+                  // Badges de acceso y tipo
                   Row(
                     children: [
                       _buildAccessBadge(),
                       const SizedBox(width: 8),
-                      _buildTypeBadge(),
-                      const Spacer(),
-                      Text(
-                        'ID: ${marca.idMa}',
-                        style: TextStyle(
-                          color: Colors.grey.shade500,
-                          fontSize: 12,
-                        ),
-                      ),
+                      _buildTypeBadge(isGenerico),
                     ],
                   ),
                   const SizedBox(height: 16),
 
                   // === SECCIÓN: PRINCIPIO ACTIVO (BOTÓN NAVEGABLE) ===
-                  _buildActiveIngredientButton(context, isDark),
+                  _buildActiveIngredientButton(isDark),
 
-                  // === SECCIÓN: TIPO Y LABORATORIO ===
+                  // === SECCIÓN: LABORATORIO (GRATIS) ===
                   _buildInfoCard(
                     icon: Icons.business,
                     title: 'Laboratorio',
                     content: marca.labM.isNotEmpty
                         ? marca.labM
                         : 'No especificado',
-                    subtitle: marca.tipoM.isNotEmpty
-                        ? 'Tipo: ${marca.tipoM}'
-                        : null,
                     color: AppColors.primaryBlue,
                     isDark: isDark,
                   ),
 
-                  // === SECCIÓN: FAMILIA ===
+                  // === SECCIÓN: FAMILIA (GRATIS) ===
                   if (marca.familiaM.isNotEmpty)
                     _buildInfoCard(
                       icon: Icons.category,
@@ -127,7 +137,7 @@ class BrandDetailScreen extends StatelessWidget {
                       isDark: isDark,
                     ),
 
-                  // === SECCIÓN: USO ===
+                  // === SECCIÓN: USO (GRATIS) ===
                   if (marca.usoM.isNotEmpty)
                     _buildInfoCard(
                       icon: Icons.medical_information,
@@ -137,40 +147,43 @@ class BrandDetailScreen extends StatelessWidget {
                       isDark: isDark,
                     ),
 
-                  // === SECCIÓN: VÍA DE ADMINISTRACIÓN ===
+                  // === SECCIÓN: VÍA DE ADMINISTRACIÓN (PREMIUM 🔒) ===
                   if (marca.viaM.isNotEmpty)
-                    _buildInfoCard(
+                    _buildConditionalSection(
                       icon: Icons.healing,
                       title: 'Vía de Administración',
                       content: marca.viaM,
                       color: AppColors.successGreen,
                       isDark: isDark,
+                      isPremium: true,
                     ),
 
-                  // === SECCIÓN: PRESENTACIÓN ===
+                  // === SECCIÓN: PRESENTACIÓN (PREMIUM 🔒) ===
                   if (marca.presentacionM.isNotEmpty)
-                    _buildExpandableCard(
+                    _buildConditionalSection(
                       icon: Icons.inventory_2,
                       title: 'Presentación',
                       content: marca.presentacionM,
                       color: AppColors.warningOrange,
                       isDark: isDark,
+                      isPremium: true,
                     ),
 
-                  // === SECCIÓN: CONTRAINDICACIONES (ROJO) ===
+                  // === SECCIÓN: CONTRAINDICACIONES (PREMIUM 🔒) ===
                   if (marca.contraindicacionesM.isNotEmpty)
-                    _buildExpandableCard(
+                    _buildConditionalSection(
                       icon: Icons.dangerous,
                       title: 'Contraindicaciones',
                       content: marca.contraindicacionesM,
                       color: AppColors.alertRed,
                       isDark: isDark,
+                      isPremium: true,
                       contentColor: AppColors.alertRed,
                     ),
 
                   const SizedBox(height: 24),
 
-                  // === FOOTER: FUENTES ===
+                  // === FOOTER: FUENTES + DESCARGO ===
                   _buildSourcesFooter(isDark),
 
                   const SizedBox(height: 32),
@@ -183,26 +196,26 @@ class BrandDetailScreen extends StatelessWidget {
     );
   }
 
+  /// Badge que indica acceso GRATIS
   Widget _buildAccessBadge() {
-    final isFree = marca.isFree;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: isFree ? AppColors.successGreen : AppColors.premiumGold,
+        color: AppColors.successGreen,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Row(
+      child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isFree ? Icons.lock_open : Icons.star,
+            Icons.lock_open,
             size: 14,
             color: Colors.white,
           ),
-          const SizedBox(width: 4),
+          SizedBox(width: 4),
           Text(
-            isFree ? 'GRATIS' : 'PREMIUM',
-            style: const TextStyle(
+            'GRATIS',
+            style: TextStyle(
               color: Colors.white,
               fontSize: 12,
               fontWeight: FontWeight.bold,
@@ -213,10 +226,8 @@ class BrandDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTypeBadge() {
-    final isGenerico =
-        marca.tipoM.toLowerCase().contains('genérico') ||
-        marca.tipoM.toLowerCase().contains('generico');
+  /// Badge de tipo (Genérico o Comercial)
+  Widget _buildTypeBadge(bool isGenerico) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -234,7 +245,8 @@ class BrandDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActiveIngredientButton(BuildContext context, bool isDark) {
+  /// Botón navegable al principio activo
+  Widget _buildActiveIngredientButton(bool isDark) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Material(
@@ -242,7 +254,7 @@ class BrandDetailScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         elevation: 2,
         child: InkWell(
-          onTap: () => _navigateToCompound(context),
+          onTap: () => _navigateToCompound(),
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -304,25 +316,25 @@ class BrandDetailScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _navigateToCompound(BuildContext context) async {
-    // Buscar el compuesto por ID
+  /// Navegar al compuesto correspondiente
+  Future<void> _navigateToCompound() async {
     final dbHelper = DatabaseHelper();
     try {
       final compuesto = await dbHelper.getCompuestoById(marca.idPam);
-      if (compuesto != null && context.mounted) {
+      if (compuesto != null && mounted) {
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => CompoundDetailScreen(compuesto: compuesto),
           ),
         );
-      } else if (context.mounted) {
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Compuesto no encontrado')),
         );
       }
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error al cargar compuesto: $e')),
         );
@@ -330,11 +342,11 @@ class BrandDetailScreen extends StatelessWidget {
     }
   }
 
+  /// Card de información simple (siempre visible)
   Widget _buildInfoCard({
     required IconData icon,
     required String title,
     required String content,
-    String? subtitle,
     required Color color,
     required bool isDark,
   }) {
@@ -385,18 +397,12 @@ class BrandDetailScreen extends StatelessWidget {
               color: isDark ? Colors.white70 : Colors.black87,
             ),
           ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-            ),
-          ],
         ],
       ),
     );
   }
 
+  /// Card expandible (para secciones gratuitas)
   Widget _buildExpandableCard({
     required IconData icon,
     required String title,
@@ -446,8 +452,7 @@ class BrandDetailScreen extends StatelessWidget {
                   fontSize: 14,
                   height: 1.6,
                   color:
-                      contentColor ??
-                      (isDark ? Colors.white70 : Colors.black87),
+                      contentColor ?? (isDark ? Colors.white70 : Colors.black87),
                 ),
               ),
             ),
@@ -457,6 +462,90 @@ class BrandDetailScreen extends StatelessWidget {
     );
   }
 
+  /// Sección condicional: muestra contenido o bloqueo premium
+  Widget _buildConditionalSection({
+    required IconData icon,
+    required String title,
+    required String content,
+    required Color color,
+    required bool isDark,
+    required bool isPremium,
+    Color? contentColor,
+  }) {
+    // Si es sección premium y el usuario NO es premium, mostrar bloqueo
+    if (isPremium && !isUserPremium) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardDark : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(13),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Theme(
+          data: ThemeData().copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.premiumGold.withAlpha(26),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.lock,
+                color: AppColors.premiumGold,
+                size: 20,
+              ),
+            ),
+            title: Row(
+              children: [
+                Icon(icon, color: Colors.grey, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.star,
+                  color: AppColors.premiumGold,
+                  size: 16,
+                ),
+              ],
+            ),
+            children: [
+              PremiumLockedSection(
+                sectionTitle: title.toLowerCase(),
+                onUpgradePressed: _navigateToPaywall,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Usuario Premium o sección gratuita: mostrar contenido
+    return _buildExpandableCard(
+      icon: icon,
+      title: title,
+      content: content,
+      color: color,
+      isDark: isDark,
+      contentColor: contentColor,
+    );
+  }
+
+  /// Footer con fuentes + descargo de disponibilidad (SOLO EN MARCAS)
   Widget _buildSourcesFooter(bool isDark) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -493,6 +582,47 @@ class BrandDetailScreen extends StatelessWidget {
               fontSize: 11,
               color: Colors.grey.shade500,
               height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Descargo adicional para marcas
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.amber.shade900.withAlpha(51)
+                  : Colors.amber.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isDark
+                    ? Colors.amber.shade700.withAlpha(77)
+                    : Colors.amber.shade200,
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 16,
+                  color: isDark ? Colors.amber.shade300 : Colors.amber.shade700,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Información obtenida de registro ISP a la fecha: Diciembre, 2025. '
+                    'Las marcas y genéricos mostrados son los registrados, no necesariamente '
+                    'los disponibles en farmacia en este momento.',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isDark
+                          ? Colors.amber.shade200
+                          : Colors.amber.shade800,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

@@ -53,6 +53,8 @@ class AuthProvider extends ChangeNotifier {
     required String password,
     required String nombre,
     required String profesion,
+    String? nivel,
+    String? area,
   }) async {
     _setLoading(true);
     _errorMessage = null;
@@ -62,6 +64,8 @@ class AuthProvider extends ChangeNotifier {
       password: password,
       nombre: nombre,
       profesion: profesion,
+      nivel: nivel,
+      area: area,
     );
 
     _setLoading(false);

@@ -22,6 +22,8 @@ class AuthService {
     required String password,
     required String nombre,
     required String profesion,
+    String? nivel,
+    String? area,
   }) async {
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
@@ -36,6 +38,8 @@ class AuthService {
           email: email,
           nombre: nombre,
           profesion: profesion,
+          nivel: nivel,
+          area: area,
           fechaRegistro: DateTime.now(),
           ultimaSesion: DateTime.now(),
           preferencias: UserPreferences(),

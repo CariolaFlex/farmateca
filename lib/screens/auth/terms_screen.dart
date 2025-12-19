@@ -3,7 +3,15 @@ import '../../utils/constants.dart';
 import '../../widgets/custom_button.dart';
 
 class TermsScreen extends StatelessWidget {
-  const TermsScreen({super.key});
+  /// Si es true, muestra el botón "Aceptar Términos" al final
+  /// Usar true cuando se llama desde RegisterScreen
+  /// Usar false (default) cuando se llama desde SettingsScreen
+  final bool showAcceptButton;
+
+  const TermsScreen({
+    super.key,
+    this.showAcceptButton = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -39,51 +47,61 @@ class TermsScreen extends StatelessWidget {
                   _buildSection(
                     '1. ACEPTACIÓN DE TÉRMINOS',
                     'Al descargar, instalar o utilizar la aplicación ${AppConstants.appName}, usted acepta estar sujeto a estos Términos y Condiciones. Si no está de acuerdo con alguno de estos términos, no debe usar la aplicación.',
+                    isDark,
                   ),
                   _buildSection(
                     '2. PROPÓSITO DE LA APLICACIÓN',
                     '${AppConstants.appName} es una herramienta de consulta farmacológica diseñada exclusivamente para profesionales y estudiantes de la salud en Chile. La información proporcionada tiene fines orientativos y educativos.',
+                    isDark,
                   ),
                   _buildSection(
                     '3. ADVERTENCIA MÉDICA IMPORTANTE',
                     'La información contenida en esta aplicación NO sustituye el juicio clínico profesional ni la consulta de fuentes primarias. Los usuarios deben buscar el consejo de un médico además de usar esta aplicación y antes de tomar cualquier decisión médica.',
+                    isDark,
                   ),
                   _buildSection(
                     '4. EXACTITUD DE LA INFORMACIÓN',
                     'Aunque el equipo de ${AppConstants.appNameFull} realiza esfuerzos razonables para mantener la base de datos actualizada y alineada con los registros oficiales, la farmacología es una ciencia en constante cambio. No garantizamos que la información esté libre de errores.',
+                    isDark,
                   ),
                   _buildSection(
                     '5. LIMITACIÓN DE RESPONSABILIDAD',
                     '${AppConstants.appNameFull}, sus desarrolladores, socios y afiliados se eximen expresamente de toda responsabilidad por cualquier daño directo, indirecto, incidental, especial o consecuente derivado del uso de la aplicación.',
+                    isDark,
                   ),
                   _buildSection(
                     '6. ORIGEN DE LOS DATOS',
                     'La información proviene de fuentes reconocidas como: Registro oficial del Instituto de Salud Pública de Chile (ISP), Guías Clínicas del Ministerio de Salud (MINSAL), y literatura internacional.',
+                    isDark,
                   ),
                   _buildSection(
                     '7. PROPIEDAD INTELECTUAL',
                     'Todo el contenido de la aplicación, incluyendo diseño, código, textos y estructura de datos, es propiedad de ${AppConstants.companyNameFull} y está protegido por las leyes de propiedad intelectual.',
+                    isDark,
                   ),
                   _buildSection(
                     '8. PRIVACIDAD',
                     'Respetamos su privacidad. Los datos personales recopilados se utilizan únicamente para mejorar la experiencia del usuario y no se comparten con terceros sin su consentimiento.',
+                    isDark,
                   ),
                   _buildSection(
                     '9. MODIFICACIONES',
                     'Nos reservamos el derecho de modificar estos términos en cualquier momento. Los cambios serán notificados a través de la aplicación.',
+                    isDark,
                   ),
                   _buildSection(
                     '10. CONTACTO',
                     'Para consultas sobre estos términos, puede contactarnos en: ${AppConstants.supportEmail}',
+                    isDark,
                   ),
                   const SizedBox(height: 24),
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.alertRed.withOpacity(0.1),
+                      color: AppColors.alertRed.withAlpha(26),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppColors.alertRed.withOpacity(0.3),
+                        color: AppColors.alertRed.withAlpha(77),
                       ),
                     ),
                     child: const Row(
@@ -110,30 +128,33 @@ class TermsScreen extends StatelessWidget {
               ),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.cardDark : Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
-                ),
-              ],
+
+          // Botón "Aceptar" SOLO si showAcceptButton es true (desde RegisterScreen)
+          if (showAcceptButton)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.cardDark : Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(13),
+                    blurRadius: 10,
+                    offset: const Offset(0, -5),
+                  ),
+                ],
+              ),
+              child: PrimaryButton(
+                text: 'Aceptar Términos',
+                icon: Icons.check_circle_outline,
+                onPressed: () => Navigator.pop(context, true),
+              ),
             ),
-            child: PrimaryButton(
-              text: 'Aceptar Términos',
-              icon: Icons.check_circle_outline,
-              onPressed: () => Navigator.pop(context, true),
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildSection(String title, String content) {
+  Widget _buildSection(String title, String content, bool isDark) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Column(
@@ -141,14 +162,18 @@ class TermsScreen extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             content,
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade700,
+              color: isDark ? Colors.white70 : Colors.grey.shade700,
               height: 1.5,
             ),
           ),
