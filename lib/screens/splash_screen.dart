@@ -1,13 +1,10 @@
 // lib/screens/splash_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'dart:async';
 
 import '../config/app_config.dart';
 import '../utils/app_colors.dart';
-import '../providers/onboarding_provider.dart';
-import 'onboarding_screen.dart';
 import 'home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -17,10 +14,12 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
@@ -45,40 +44,40 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       ),
     );
 
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.65, 1.0, curve: Curves.easeInOut),
+      ),
+    );
+
     _controller.forward();
     _initializeApp();
   }
 
   Future<void> _initializeApp() async {
+    // Duración normal del splash
     await Future.delayed(const Duration(milliseconds: 2500));
 
     if (!mounted) return;
 
-    final onboardingProvider = Provider.of<OnboardingProvider>(context, listen: false);
-
-    if (!mounted) return;
-
-    if (!onboardingProvider.isCompleted) {
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => const OnboardingScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 500),
-        ),
-      );
-    } else {
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => const HomeScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          transitionDuration: const Duration(milliseconds: 500),
-        ),
-      );
+    // LOG para debug (si está habilitado)
+    if (AppConfig.debugMode) {
+      print('🎨 SPLASH SCREEN: Inicializando app...');
     }
+
+    // Por ahora ir directo a Home (auth se implementará después)
+    // TODO: Implementar flujo completo de autenticación en FASE 3
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const HomeScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
   }
 
   @override
@@ -98,36 +97,52 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             return Opacity(
               opacity: _fadeAnimation.value,
               child: Transform.scale(
-                scale: _scaleAnimation.value,
+                scale: _scaleAnimation.value * _pulseAnimation.value,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Isotipo Farmateca
+                    // Isotipo Farmateca con diseño mejorado
                     Container(
-                      width: 160,
-                      height: 160,
-                      padding: const EdgeInsets.all(20),
+                      width: 140,
+                      height: 140,
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(30),
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white,
+                            Colors.white.withOpacity(0.9),
+                          ],
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
+                            color: Colors.black.withOpacity(0.15),
+                            blurRadius: 30,
+                            offset: const Offset(0, 15),
+                            spreadRadius: -5,
+                          ),
+                          BoxShadow(
+                            color: AppColors.primaryLight.withOpacity(0.3),
+                            blurRadius: 40,
+                            offset: const Offset(0, 5),
                           ),
                         ],
                       ),
-                      child: Image.asset(
-                        'assets/images/logos/isotipo_farmateca.png',
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(
-                            Icons.local_pharmacy,
-                            size: 80,
-                            color: AppColors.primaryDark,
-                          );
-                        },
+                      child: Center(
+                        child: Image.asset(
+                          'assets/images/logos/isotipo_farmateca.png',
+                          width: 90,
+                          height: 90,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.local_pharmacy,
+                              size: 60,
+                              color: AppColors.primaryDark,
+                            );
+                          },
+                        ),
                       ),
                     ),
 
