@@ -6,6 +6,7 @@ import '../services/database_helper.dart';
 import '../models/medication_models.dart';
 import 'detail/compound_detail_screen.dart';
 import 'detail/brand_detail_screen.dart';
+import 'detail/family_detail_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   final String? searchType; // 'compuesto', 'marca', o null para búsqueda global
@@ -21,8 +22,10 @@ class _SearchScreenState extends State<SearchScreen> {
   final DatabaseHelper _dbHelper = DatabaseHelper();
 
   List<dynamic> _results = [];
+  List<Map<String, dynamic>> _filteredFamilies = [];
   bool _isLoading = false;
   String _currentFilter = 'todos';
+  bool _showFamilyFilter = false; // Para filtro por familia en compuestos
 
   @override
   void initState() {
@@ -39,14 +42,39 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _performSearch(String query) async {
-    if (query.trim().isEmpty) {
-      setState(() => _results = []);
+    // Si está en modo familia, no requiere query
+    if (query.trim().isEmpty && !_showFamilyFilter) {
+      setState(() {
+        _results = [];
+        _filteredFamilies = [];
+      });
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
+      // Si está en modo familia (solo para compuestos)
+      if (_showFamilyFilter && widget.searchType == 'compuesto') {
+        final allCompounds = await _dbHelper.searchCompuestos('');
+        final families = _groupByFamily(allCompounds.cast<Compuesto>());
+
+        // Filtrar por búsqueda si hay query
+        List<Map<String, dynamic>> filtered = families;
+        if (query.isNotEmpty) {
+          filtered = families.where((family) =>
+              (family['nombre'] as String).toLowerCase().contains(query.toLowerCase())
+          ).toList();
+        }
+
+        setState(() {
+          _filteredFamilies = filtered;
+          _results = [];
+          _isLoading = false;
+        });
+        return;
+      }
+
       List<dynamic> results = [];
 
       switch (_currentFilter) {
@@ -67,6 +95,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
       setState(() {
         _results = results;
+        _filteredFamilies = [];
         _isLoading = false;
       });
     } catch (e) {
@@ -77,6 +106,31 @@ class _SearchScreenState extends State<SearchScreen> {
         ).showSnackBar(SnackBar(content: Text('Error en búsqueda: $e')));
       }
     }
+  }
+
+  /// Agrupa los compuestos por familia
+  List<Map<String, dynamic>> _groupByFamily(List<Compuesto> compounds) {
+    Map<String, List<Compuesto>> familyMap = {};
+
+    for (var compound in compounds) {
+      final familyName = compound.familia.isNotEmpty ? compound.familia : 'Sin familia';
+      if (!familyMap.containsKey(familyName)) {
+        familyMap[familyName] = [];
+      }
+      familyMap[familyName]!.add(compound);
+    }
+
+    // Convertir a lista ordenada alfabéticamente
+    List<Map<String, dynamic>> families = familyMap.entries.map((entry) {
+      return {
+        'nombre': entry.key,
+        'compuestos': entry.value,
+        'cantidad': entry.value.length,
+      };
+    }).toList();
+
+    families.sort((a, b) => (a['nombre'] as String).compareTo(b['nombre'] as String));
+    return families;
   }
 
   @override
@@ -163,29 +217,98 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ),
 
+          // Botón de filtro por Familia (solo si es búsqueda de compuestos)
+          if (widget.searchType == 'compuesto')
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  _buildFilterChip('Todos', 'todos'),
+                  const SizedBox(width: 12),
+                  // Botón con label "Por Familia"
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _showFamilyFilter = !_showFamilyFilter;
+                      });
+                      _performSearch(_searchController.text);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _showFamilyFilter ? teal.AppColors.primaryDark : Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: teal.AppColors.primaryDark,
+                          width: 2,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.category,
+                            size: 20,
+                            color: _showFamilyFilter ? Colors.white : teal.AppColors.primaryDark,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Por Familia',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: _showFamilyFilter ? Colors.white : teal.AppColors.primaryDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
           // Resultados
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : _results.isEmpty
-                ? _buildEmptyState()
-                : RefreshIndicator(
-                    color: teal.AppColors.primaryDark,
-                    onRefresh: () async {
-                      await Future.delayed(const Duration(milliseconds: 500));
-                      if (_searchController.text.isNotEmpty) {
-                        _performSearch(_searchController.text);
-                      }
-                    },
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _results.length,
-                      itemBuilder: (context, index) {
-                        final item = _results[index];
-                        return _buildResultCard(item);
-                      },
-                    ),
-                  ),
+                : (_showFamilyFilter && widget.searchType == 'compuesto'
+                    ? (_filteredFamilies.isEmpty
+                        ? _buildEmptyState()
+                        : RefreshIndicator(
+                            color: teal.AppColors.primaryDark,
+                            onRefresh: () async {
+                              await Future.delayed(const Duration(milliseconds: 500));
+                              _performSearch(_searchController.text);
+                            },
+                            child: ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: _filteredFamilies.length,
+                              itemBuilder: (context, index) {
+                                final family = _filteredFamilies[index];
+                                return _buildFamilyCard(family);
+                              },
+                            ),
+                          ))
+                    : (_results.isEmpty
+                        ? _buildEmptyState()
+                        : RefreshIndicator(
+                            color: teal.AppColors.primaryDark,
+                            onRefresh: () async {
+                              await Future.delayed(const Duration(milliseconds: 500));
+                              if (_searchController.text.isNotEmpty) {
+                                _performSearch(_searchController.text);
+                              }
+                            },
+                            child: ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: _results.length,
+                              itemBuilder: (context, index) {
+                                final item = _results[index];
+                                return _buildResultCard(item);
+                              },
+                            ),
+                          ))),
           ),
         ],
       ),
@@ -252,9 +375,18 @@ class _SearchScreenState extends State<SearchScreen> {
         (item.tipoM.toLowerCase().contains('genérico') ||
          item.tipoM.toLowerCase().contains('generico'));
 
+    // Detectar si está "Próximamente" (sin información completa)
+    final bool isComingSoon;
+    if (isCompuesto) {
+      isComingSoon = _isComingSoonCompound(item);
+    } else {
+      isComingSoon = _isComingSoonBrand(item as Marca);
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
+      elevation: isComingSoon ? 1 : 2,
+      color: isComingSoon ? Colors.grey.shade200 : Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
@@ -264,20 +396,23 @@ class _SearchScreenState extends State<SearchScreen> {
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: teal.AppColors.primaryLight.withValues(alpha: 0.3),
+            color: isComingSoon
+                ? Colors.grey.shade300
+                : teal.AppColors.primaryLight.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
             isCompuesto ? Icons.medication : Icons.local_pharmacy,
-            color: teal.AppColors.primaryDark,
+            color: isComingSoon ? Colors.grey.shade500 : teal.AppColors.primaryDark,
             size: 28,
           ),
         ),
         title: Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
+            color: isComingSoon ? Colors.grey.shade700 : Colors.black87,
           ),
         ),
         subtitle: Column(
@@ -286,12 +421,31 @@ class _SearchScreenState extends State<SearchScreen> {
             Text(
               subtitle.isNotEmpty ? subtitle : 'Sin información',
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: isComingSoon ? Colors.grey.shade600 : Colors.grey.shade600,
                 fontSize: 14,
               ),
             ),
-            // Solo mostrar badge GENÉRICO para marcas genéricas
-            if (isGenerico) ...[
+            // Badge PRÓXIMAMENTE
+            if (isComingSoon) ...[
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: teal.AppColors.comingSoonGray,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'PRÓXIMAMENTE',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+            // Solo mostrar badge GENÉRICO para marcas genéricas (si no es próximamente)
+            if (!isComingSoon && isGenerico) ...[
               const SizedBox(height: 4),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -313,10 +467,86 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
         trailing: Icon(
           Icons.arrow_forward_ios,
-          color: teal.AppColors.primaryDark,
+          color: isComingSoon ? Colors.grey.shade400 : teal.AppColors.primaryDark,
           size: 18,
         ),
-        onTap: () => _navigateToDetail(item, isCompuesto),
+        onTap: () {
+          if (isComingSoon) {
+            _showComingSoonDialog(title);
+          } else {
+            _navigateToDetail(item, isCompuesto);
+          }
+        },
+      ),
+    );
+  }
+
+  /// Verifica si un compuesto está "próximamente" (sin información completa)
+  bool _isComingSoonCompound(Compuesto compound) {
+    return compound.uso.isEmpty ||
+        compound.posologia.isEmpty ||
+        compound.mecanismo.isEmpty;
+  }
+
+  /// Verifica si una marca está "próximamente" (sin información completa)
+  bool _isComingSoonBrand(Marca brand) {
+    return brand.usoM.isEmpty || brand.presentacionM.isEmpty;
+  }
+
+  /// Muestra diálogo para medicamentos "próximamente"
+  void _showComingSoonDialog(String medicationName) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.info_outline, color: teal.AppColors.primaryDark, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Próximamente',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: teal.AppColors.primaryDark,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'El medicamento "$medicationName" estará disponible pronto con toda su información farmacológica.\n\n¿Quieres que te notifiquemos cuando esté listo?',
+          style: const TextStyle(fontSize: 15, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cerrar',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Te notificaremos cuando esté disponible'),
+                  backgroundColor: teal.AppColors.successGreen,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: teal.AppColors.primaryDark,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Notificarme', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
@@ -338,5 +568,61 @@ class _SearchScreenState extends State<SearchScreen> {
         ),
       );
     }
+  }
+
+  /// Card para mostrar una familia farmacológica
+  Widget _buildFamilyCard(Map<String, dynamic> family) {
+    return Card(
+      elevation: 2,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
+        leading: Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: teal.AppColors.primaryMedium.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            Icons.category,
+            color: teal.AppColors.primaryDark,
+            size: 28,
+          ),
+        ),
+        title: Text(
+          family['nombre'] as String,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          '${family['cantidad']} compuesto${(family['cantidad'] as int) != 1 ? 's' : ''}',
+          style: TextStyle(
+            color: teal.AppColors.primaryMedium,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: teal.AppColors.primaryDark,
+        ),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => FamilyDetailScreen(
+                familyName: family['nombre'] as String,
+                compounds: family['compuestos'] as List<Compuesto>,
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 }
