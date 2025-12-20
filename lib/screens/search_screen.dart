@@ -1,7 +1,7 @@
 // lib/screens/search_screen.dart
 
 import 'package:flutter/material.dart';
-import '../utils/constants.dart';
+import '../utils/app_colors.dart' as teal;
 import '../services/database_helper.dart';
 import '../models/medication_models.dart';
 import 'detail/compound_detail_screen.dart';
@@ -81,45 +81,68 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     String title = 'Buscar';
     if (widget.searchType == 'compuesto') title = 'Buscar Compuesto';
     if (widget.searchType == 'marca') title = 'Buscar Marca';
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
-        backgroundColor: AppColors.primaryBlue,
-        foregroundColor: Colors.white,
+        backgroundColor: teal.AppColors.primaryDark,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
       body: Column(
         children: [
-          // Barra de búsqueda
+          // Barra de búsqueda con gradiente teal
           Container(
-            padding: const EdgeInsets.all(16),
-            color: isDark ? AppColors.cardDark : Colors.white,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  teal.AppColors.primaryDark,
+                  teal.AppColors.primaryMedium,
+                ],
+              ),
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Escribe para buscar...',
-                prefixIcon: const Icon(Icons.search),
+                hintStyle: TextStyle(color: Colors.grey.shade400),
+                prefixIcon: Icon(Icons.search, color: teal.AppColors.primaryDark),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear),
+                        icon: Icon(Icons.clear, color: teal.AppColors.primaryDark),
                         onPressed: () {
                           _searchController.clear();
                           setState(() => _results = []);
                         },
                       )
                     : null,
+                filled: true,
+                fillColor: Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
                 ),
-                filled: true,
-                fillColor: isDark
-                    ? AppColors.surfaceDark
-                    : Colors.grey.shade100,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
               onChanged: _performSearch,
             ),
@@ -145,36 +168,49 @@ class _SearchScreenState extends State<SearchScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _results.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.search,
-                          size: 64,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _searchController.text.isEmpty
-                              ? 'Ingresa un término de búsqueda'
-                              : 'No se encontraron resultados',
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _results.length,
-                    itemBuilder: (context, index) {
-                      final item = _results[index];
-                      return _buildResultCard(item);
+                ? _buildEmptyState()
+                : RefreshIndicator(
+                    color: teal.AppColors.primaryDark,
+                    onRefresh: () async {
+                      await Future.delayed(const Duration(milliseconds: 500));
+                      if (_searchController.text.isNotEmpty) {
+                        _performSearch(_searchController.text);
+                      }
                     },
+                    child: ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _results.length,
+                      itemBuilder: (context, index) {
+                        final item = _results[index];
+                        return _buildResultCard(item);
+                      },
+                    ),
                   ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 80,
+            color: Colors.grey.shade300,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _searchController.text.isEmpty
+                ? 'Ingresa un término de búsqueda...'
+                : 'No se encontraron resultados',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey.shade600,
+            ),
           ),
         ],
       ),
@@ -184,7 +220,13 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget _buildFilterChip(String label, String value) {
     final isSelected = _currentFilter == value;
     return FilterChip(
-      label: Text(label),
+      label: Text(
+        label,
+        style: TextStyle(
+          color: isSelected ? Colors.white : teal.AppColors.primaryDark,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
       selected: isSelected,
       onSelected: (selected) {
         setState(() => _currentFilter = value);
@@ -192,8 +234,11 @@ class _SearchScreenState extends State<SearchScreen> {
           _performSearch(_searchController.text);
         }
       },
-      selectedColor: AppColors.primaryBlue.withAlpha(51),
-      checkmarkColor: AppColors.primaryBlue,
+      backgroundColor: Colors.white,
+      selectedColor: teal.AppColors.primaryDark,
+      checkmarkColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      elevation: 2,
     );
   }
 
@@ -201,52 +246,76 @@ class _SearchScreenState extends State<SearchScreen> {
     final bool isCompuesto = item is Compuesto;
     final String title = isCompuesto ? item.pa : (item as Marca).ma;
     final String subtitle = isCompuesto ? item.familia : item.paM;
-    final bool isFree = isCompuesto ? item.isFree : item.isFree;
+
+    // Detectar si es marca genérica
+    final bool isGenerico = !isCompuesto &&
+        (item.tipoM.toLowerCase().contains('genérico') ||
+         item.tipoM.toLowerCase().contains('generico'));
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
         leading: Container(
-          width: 48,
-          height: 48,
+          width: 50,
+          height: 50,
           decoration: BoxDecoration(
-            color: isCompuesto
-                ? AppColors.primaryBlue.withAlpha(26)
-                : AppColors.secondaryTeal.withAlpha(26),
-            borderRadius: BorderRadius.circular(12),
+            color: teal.AppColors.primaryLight.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
-            isCompuesto ? Icons.science : Icons.local_pharmacy,
-            color: isCompuesto
-                ? AppColors.primaryBlue
-                : AppColors.secondaryTeal,
+            isCompuesto ? Icons.medication : Icons.local_pharmacy,
+            color: teal.AppColors.primaryDark,
+            size: 28,
           ),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(subtitle),
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: isFree ? AppColors.successGreen : AppColors.premiumGold,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                isFree ? 'GRATIS' : 'PREMIUM',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
+            Text(
+              subtitle.isNotEmpty ? subtitle : 'Sin información',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 14,
               ),
             ),
+            // Solo mostrar badge GENÉRICO para marcas genéricas
+            if (isGenerico) ...[
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade100,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'GENÉRICO',
+                  style: TextStyle(
+                    color: Colors.blue.shade700,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          color: teal.AppColors.primaryDark,
+          size: 18,
+        ),
         onTap: () => _navigateToDetail(item, isCompuesto),
       ),
     );

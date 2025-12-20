@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 
@@ -144,5 +145,69 @@ class AuthProvider extends ChangeNotifier {
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
+  }
+
+  /// Actualiza el perfil del usuario en Firestore
+  Future<void> updateUserProfile({
+    String? photoURL,
+    String? alias,
+    String? nivel,
+    String? area,
+  }) async {
+    if (_firebaseUser == null || _userModel == null) return;
+
+    try {
+      final updates = <String, dynamic>{
+        'ultima_sesion': Timestamp.now(),
+      };
+
+      if (photoURL != null) updates['photoURL'] = photoURL;
+      if (alias != null) updates['alias'] = alias;
+      if (nivel != null) updates['nivel'] = nivel;
+      if (area != null) updates['area'] = area;
+
+      // 1. Actualizar Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_firebaseUser!.uid)
+          .update(updates);
+
+      // 2. Actualizar Firebase Auth si hay photoURL
+      if (photoURL != null) {
+        await _firebaseUser!.updatePhotoURL(photoURL);
+        // Recargar usuario para obtener cambios
+        await _firebaseUser!.reload();
+        _firebaseUser = FirebaseAuth.instance.currentUser;
+      }
+
+      // 3. Actualizar modelo local
+      _userModel = _userModel!.copyWith(
+        photoURL: photoURL ?? _userModel!.photoURL,
+        alias: alias ?? _userModel!.alias,
+        nivel: nivel ?? _userModel!.nivel,
+        area: area ?? _userModel!.area,
+        ultimaSesion: DateTime.now(),
+      );
+
+      // 4. Notificar cambios a todos los listeners
+      notifyListeners();
+
+      debugPrint('✅ Perfil actualizado: photoURL=$photoURL, alias=$alias');
+    } catch (e) {
+      debugPrint('❌ Error updating profile: $e');
+      rethrow;
+    }
+  }
+
+  /// Recargar datos del usuario desde Firestore
+  Future<void> reloadUserData() async {
+    if (_firebaseUser == null) return;
+
+    try {
+      _userModel = await _authService.getCurrentUserData();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error reloading user data: $e');
+    }
   }
 }

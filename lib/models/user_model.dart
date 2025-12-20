@@ -7,6 +7,8 @@ class UserModel {
   final String profesion; // Mantener por compatibilidad con datos existentes
   final String? nivel; // NUEVO: 'estudiante', 'interno', 'profesional'
   final String? area; // NUEVO: 'medicina', 'enfermeria', etc.
+  final String? alias; // Apodo del usuario
+  final String? photoURL; // URL de la foto de perfil
   final DateTime fechaRegistro;
   final DateTime ultimaSesion;
   final UserPreferences preferencias;
@@ -20,6 +22,8 @@ class UserModel {
     required this.profesion,
     this.nivel,
     this.area,
+    this.alias,
+    this.photoURL,
     required this.fechaRegistro,
     required this.ultimaSesion,
     required this.preferencias,
@@ -69,7 +73,8 @@ class UserModel {
 
   /// Obtiene la profesión completa en formato legible
   String get profesionCompleta {
-    if (nivel == null) return profesion.isNotEmpty ? profesion : 'No especificado';
+    if (nivel == null)
+      return profesion.isNotEmpty ? profesion : 'No especificado';
     if (area == null) return nivelDisplay;
     return '$nivelDisplay de $areaDisplay';
   }
@@ -83,6 +88,8 @@ class UserModel {
       profesion: data['profesion'] ?? '',
       nivel: data['nivel'],
       area: data['area'],
+      alias: data['alias'],
+      photoURL: data['photoURL'],
       fechaRegistro:
           (data['fecha_registro'] as Timestamp?)?.toDate() ?? DateTime.now(),
       ultimaSesion:
@@ -103,6 +110,8 @@ class UserModel {
       'profesion': profesion,
       'nivel': nivel,
       'area': area,
+      'alias': alias,
+      'photoURL': photoURL,
       'fecha_registro': Timestamp.fromDate(fechaRegistro),
       'ultima_sesion': Timestamp.fromDate(ultimaSesion),
       'preferencias': preferencias.toMap(),
@@ -118,6 +127,8 @@ class UserModel {
     String? profesion,
     String? nivel,
     String? area,
+    String? alias,
+    String? photoURL,
     DateTime? fechaRegistro,
     DateTime? ultimaSesion,
     UserPreferences? preferencias,
@@ -131,6 +142,8 @@ class UserModel {
       profesion: profesion ?? this.profesion,
       nivel: nivel ?? this.nivel,
       area: area ?? this.area,
+      alias: alias ?? this.alias,
+      photoURL: photoURL ?? this.photoURL,
       fechaRegistro: fechaRegistro ?? this.fechaRegistro,
       ultimaSesion: ultimaSesion ?? this.ultimaSesion,
       preferencias: preferencias ?? this.preferencias,
@@ -139,6 +152,9 @@ class UserModel {
           favoritosSincronizados ?? this.favoritosSincronizados,
     );
   }
+
+  /// Nombre para mostrar (alias si existe, sino nombre)
+  String get displayName => alias?.isNotEmpty == true ? alias! : nombre;
 }
 
 class UserPreferences {

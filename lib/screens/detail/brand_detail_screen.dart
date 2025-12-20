@@ -1,10 +1,14 @@
 // lib/screens/detail/brand_detail_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../models/medication_models.dart';
 import '../../utils/constants.dart';
+import '../../utils/app_colors.dart' as teal;
 import '../../services/database_helper.dart';
+import '../../services/favorites_service.dart';
 import '../../widgets/premium_locked_section.dart';
+import '../../providers/auth_provider.dart';
 import '../paywall_screen.dart';
 import 'compound_detail_screen.dart';
 
@@ -23,6 +27,117 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
   // TODO: Implementar lógica real con RevenueCat cuando esté configurado
   bool get isUserPremium => false; // Por ahora todos FREE para testing
 
+  // === FAVORITOS ===
+  final FavoritesService _favoritesService = FavoritesService();
+  bool _isFavorite = false;
+  bool _isLoadingFavorite = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfFavorite();
+  }
+
+  Future<void> _checkIfFavorite() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userId = authProvider.firebaseUser?.uid;
+
+    if (userId != null) {
+      final isFav = await _favoritesService.isBrandFavorite(
+        userId: userId,
+        brandId: widget.marca.idMa,
+      );
+
+      setState(() {
+        _isFavorite = isFav;
+        _isLoadingFavorite = false;
+      });
+    } else {
+      setState(() {
+        _isLoadingFavorite = false;
+      });
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userId = authProvider.firebaseUser?.uid;
+
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Inicia sesión para guardar favoritos'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoadingFavorite = true);
+
+    try {
+      if (_isFavorite) {
+        await _favoritesService.removeBrandFromFavorites(
+          userId: userId,
+          brandId: widget.marca.idMa,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.heart_broken, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('Eliminado de favoritos'),
+                ],
+              ),
+              backgroundColor: Colors.grey.shade700,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        await _favoritesService.addBrandToFavorites(
+          userId: userId,
+          brand: widget.marca,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.favorite, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('Agregado a favoritos'),
+                ],
+              ),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+
+      setState(() {
+        _isFavorite = !_isFavorite;
+        _isLoadingFavorite = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingFavorite = false);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error al actualizar favoritos'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _navigateToPaywall() {
     Navigator.push(
       context,
@@ -39,11 +154,11 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // AppBar con gradiente (diferente color para marcas)
+          // AppBar con gradiente TEAL
           SliverAppBar(
             expandedHeight: 180,
             pinned: true,
-            backgroundColor: AppColors.secondaryTeal,
+            backgroundColor: teal.AppColors.primaryDark,
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
                 marca.ma,
@@ -55,11 +170,7 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
               ),
               background: Container(
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [AppColors.secondaryTeal, Color(0xFF00ACC1)],
-                  ),
+                  gradient: teal.AppColors.primaryGradient,
                 ),
                 child: Center(
                   child: Column(
@@ -85,14 +196,26 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
             ),
             actions: [
               // Botón de favorito
-              IconButton(
-                icon: const Icon(Icons.favorite_border, color: Colors.white),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Agregado a favoritos')),
-                  );
-                },
-              ),
+              _isLoadingFavorite
+                  ? const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                    )
+                  : IconButton(
+                      icon: Icon(
+                        _isFavorite ? Icons.favorite : Icons.favorite_border,
+                        color: _isFavorite ? Colors.red : Colors.white,
+                      ),
+                      onPressed: _toggleFavorite,
+                    ),
             ],
           ),
 
@@ -103,29 +226,25 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Badges de acceso y tipo
-                  Row(
-                    children: [
-                      _buildAccessBadge(),
-                      const SizedBox(width: 8),
-                      _buildTypeBadge(isGenerico),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                  // Solo badge de tipo (GENÉRICO o COMERCIAL) - sin badge GRATIS
+                  if (isGenerico) ...[
+                    _buildTypeBadge(isGenerico),
+                    const SizedBox(height: 16),
+                  ],
 
                   // === SECCIÓN: PRINCIPIO ACTIVO (BOTÓN NAVEGABLE) ===
                   _buildActiveIngredientButton(isDark),
 
-                  // === SECCIÓN: LABORATORIO (GRATIS) ===
-                  _buildInfoCard(
-                    icon: Icons.business,
-                    title: 'Laboratorio',
-                    content: marca.labM.isNotEmpty
-                        ? marca.labM
-                        : 'No especificado',
-                    color: AppColors.primaryBlue,
-                    isDark: isDark,
-                  ),
+                  // === SECCIÓN: LABORATORIO (GRATIS) - OCULTO EN GENÉRICOS ===
+                  // En genéricos el laboratorio ya está en el título (paréntesis)
+                  if (!isGenerico && marca.labM.isNotEmpty)
+                    _buildInfoCard(
+                      icon: Icons.business,
+                      title: 'Laboratorio',
+                      content: marca.labM,
+                      color: teal.AppColors.primaryDark,
+                      isDark: isDark,
+                    ),
 
                   // === SECCIÓN: FAMILIA (GRATIS) ===
                   if (marca.familiaM.isNotEmpty)
@@ -133,7 +252,7 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
                       icon: Icons.category,
                       title: 'Familia Farmacológica',
                       content: marca.familiaM,
-                      color: AppColors.primaryBlue,
+                      color: teal.AppColors.primaryDark,
                       isDark: isDark,
                     ),
 
@@ -143,7 +262,7 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
                       icon: Icons.medical_information,
                       title: 'Uso Clínico',
                       content: marca.usoM,
-                      color: AppColors.secondaryTeal,
+                      color: teal.AppColors.primaryMedium,
                       isDark: isDark,
                     ),
 
@@ -153,7 +272,7 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
                       icon: Icons.healing,
                       title: 'Vía de Administración',
                       content: marca.viaM,
-                      color: AppColors.successGreen,
+                      color: teal.AppColors.successGreen,
                       isDark: isDark,
                       isPremium: true,
                     ),
@@ -164,7 +283,7 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
                       icon: Icons.inventory_2,
                       title: 'Presentación',
                       content: marca.presentacionM,
-                      color: AppColors.warningOrange,
+                      color: teal.AppColors.warningOrange,
                       isDark: isDark,
                       isPremium: true,
                     ),
@@ -175,10 +294,10 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
                       icon: Icons.dangerous,
                       title: 'Contraindicaciones',
                       content: marca.contraindicacionesM,
-                      color: AppColors.alertRed,
+                      color: teal.AppColors.alertRed,
                       isDark: isDark,
                       isPremium: true,
-                      contentColor: AppColors.alertRed,
+                      contentColor: teal.AppColors.alertRed,
                     ),
 
                   const SizedBox(height: 24),
@@ -196,48 +315,18 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
     );
   }
 
-  /// Badge que indica acceso GRATIS
-  Widget _buildAccessBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.successGreen,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.lock_open,
-            size: 14,
-            color: Colors.white,
-          ),
-          SizedBox(width: 4),
-          Text(
-            'GRATIS',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   /// Badge de tipo (Genérico o Comercial)
   Widget _buildTypeBadge(bool isGenerico) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: isGenerico ? Colors.blue.shade100 : Colors.purple.shade100,
+        color: isGenerico ? Colors.blue.shade100 : teal.AppColors.primaryLight,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         isGenerico ? 'GENÉRICO' : 'COMERCIAL',
         style: TextStyle(
-          color: isGenerico ? Colors.blue.shade700 : Colors.purple.shade700,
+          color: isGenerico ? Colors.blue.shade700 : teal.AppColors.primaryDark,
           fontSize: 12,
           fontWeight: FontWeight.bold,
         ),
@@ -250,7 +339,7 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Material(
-        color: isDark ? AppColors.cardDark : Colors.white,
+        color: isDark ? teal.AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(12),
         elevation: 2,
         child: InkWell(
@@ -263,12 +352,12 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryBlue.withAlpha(26),
+                    color: teal.AppColors.primaryDark.withAlpha(26),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
                     Icons.science,
-                    color: AppColors.primaryBlue,
+                    color: teal.AppColors.primaryDark,
                     size: 24,
                   ),
                 ),
@@ -290,7 +379,7 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primaryBlue,
+                          color: teal.AppColors.primaryDark,
                         ),
                       ),
                     ],
@@ -299,12 +388,12 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryBlue.withAlpha(26),
+                    color: teal.AppColors.primaryDark.withAlpha(26),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
                     Icons.arrow_forward,
-                    color: AppColors.primaryBlue,
+                    color: teal.AppColors.primaryDark,
                     size: 20,
                   ),
                 ),
@@ -354,7 +443,7 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : Colors.white,
+        color: isDark ? teal.AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -414,7 +503,7 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : Colors.white,
+        color: isDark ? teal.AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -477,7 +566,7 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
       return Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.cardDark : Colors.white,
+          color: isDark ? teal.AppColors.surfaceDark : Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -493,12 +582,12 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.premiumGold.withAlpha(26),
+                color: teal.AppColors.premiumGold.withAlpha(26),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
                 Icons.lock,
-                color: AppColors.premiumGold,
+                color: teal.AppColors.premiumGold,
                 size: 20,
               ),
             ),
@@ -518,7 +607,7 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
                 ),
                 const Icon(
                   Icons.star,
-                  color: AppColors.premiumGold,
+                  color: teal.AppColors.premiumGold,
                   size: 16,
                 ),
               ],
@@ -551,8 +640,8 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.grey.shade800.withAlpha(128)
-            : Colors.grey.shade100,
+            ? teal.AppColors.grey800.withAlpha(128)
+            : teal.AppColors.grey100,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,

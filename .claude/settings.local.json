@@ -11,7 +11,9 @@
       "Bash(mkdir:*)",
       "Bash(flutter analyze:*)",
       "Bash(test:*)",
-      "Bash(flutter build:*)"
+      "Bash(flutter build:*)",
+      "Bash(flutter pub get:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

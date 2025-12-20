@@ -9,6 +9,7 @@ import 'config/app_config.dart';
 import 'providers/auth_provider.dart';
 import 'providers/onboarding_provider.dart';
 import 'providers/theme_provider.dart';
+import 'providers/preferences_provider.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'utils/app_theme.dart';
@@ -45,14 +46,28 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => OnboardingProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => PreferencesProvider()),
       ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, child) {
+      // Consumer2 escucha cambios de ThemeProvider Y PreferencesProvider
+      child: Consumer2<ThemeProvider, PreferencesProvider>(
+        builder: (context, themeProvider, prefsProvider, child) {
+          // Obtener tema base según modo oscuro/claro
+          final baseLight = AppTheme.lightTheme;
+          final baseDark = AppTheme.darkTheme;
+
+          // Aplicar tipografía personalizada a ambos temas
+          final customLightTheme = baseLight.copyWith(
+            textTheme: prefsProvider.getTextTheme(baseLight.textTheme),
+          );
+          final customDarkTheme = baseDark.copyWith(
+            textTheme: prefsProvider.getTextTheme(baseDark.textTheme),
+          );
+
           return MaterialApp(
             title: AppConfig.appName,
             debugShowCheckedModeBanner: false,
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
+            theme: customLightTheme,
+            darkTheme: customDarkTheme,
             themeMode: themeProvider.themeMode,
             // Si onboarding completado -> SplashScreen (flujo normal)
             // Si no -> OnboardingScreen (primera vez)

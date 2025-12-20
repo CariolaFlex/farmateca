@@ -33,6 +33,7 @@ dependencies:
   connectivity_plus: ^6.1.4
   package_info_plus: ^8.3.0
   url_launcher: ^6.3.1
+  image_picker: ^1.1.2
   
   # === Compras in-app (para suscripciones) ===
   in_app_purchase: ^3.2.0

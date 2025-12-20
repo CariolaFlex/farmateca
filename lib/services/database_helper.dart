@@ -75,13 +75,16 @@ class DatabaseHelper {
       )
     ''');
 
-    // Tabla de Favoritos
+    // Tabla de Favoritos (con soporte multi-usuario)
     await db.execute('''
       CREATE TABLE favoritos(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        item_id TEXT,
-        tipo TEXT,
-        fecha_agregado TEXT
+        userId TEXT NOT NULL,
+        tipo TEXT NOT NULL,
+        itemId TEXT NOT NULL,
+        itemName TEXT NOT NULL,
+        fechaAgregado TEXT NOT NULL,
+        UNIQUE(userId, tipo, itemId)
       )
     ''');
 
@@ -276,34 +279,139 @@ class DatabaseHelper {
     return results.map((map) => map['lab_m'] as String).toList();
   }
 
-  // === FAVORITOS ===
+  // === FAVORITOS (con soporte multi-usuario) ===
 
-  Future<void> addFavorito(String itemId, String tipo) async {
+  Future<void> insertFavoriteCompound({
+    required String userId,
+    required String compoundId,
+    required String compoundName,
+  }) async {
     final db = await database;
-    await db.insert('favoritos', {
-      'item_id': itemId,
-      'tipo': tipo,
-      'fecha_agregado': DateTime.now().toIso8601String(),
-    });
-  }
-
-  Future<void> removeFavorito(String itemId) async {
-    final db = await database;
-    await db.delete('favoritos', where: 'item_id = ?', whereArgs: [itemId]);
-  }
-
-  Future<bool> isFavorito(String itemId) async {
-    final db = await database;
-    final results = await db.query(
+    await db.insert(
       'favoritos',
-      where: 'item_id = ?',
-      whereArgs: [itemId],
+      {
+        'userId': userId,
+        'tipo': 'compuesto',
+        'itemId': compoundId,
+        'itemName': compoundName,
+        'fechaAgregado': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    return results.isNotEmpty;
   }
 
-  Future<List<Map<String, dynamic>>> getAllFavoritos() async {
+  Future<void> insertFavoriteBrand({
+    required String userId,
+    required String brandId,
+    required String brandName,
+  }) async {
     final db = await database;
-    return await db.query('favoritos', orderBy: 'fecha_agregado DESC');
+    await db.insert(
+      'favoritos',
+      {
+        'userId': userId,
+        'tipo': 'marca',
+        'itemId': brandId,
+        'itemName': brandName,
+        'fechaAgregado': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> deleteFavoriteCompound({
+    required String userId,
+    required String compoundId,
+  }) async {
+    final db = await database;
+    await db.delete(
+      'favoritos',
+      where: 'userId = ? AND tipo = ? AND itemId = ?',
+      whereArgs: [userId, 'compuesto', compoundId],
+    );
+  }
+
+  Future<void> deleteFavoriteBrand({
+    required String userId,
+    required String brandId,
+  }) async {
+    final db = await database;
+    await db.delete(
+      'favoritos',
+      where: 'userId = ? AND tipo = ? AND itemId = ?',
+      whereArgs: [userId, 'marca', brandId],
+    );
+  }
+
+  Future<bool> isCompoundFavorite({
+    required String userId,
+    required String compoundId,
+  }) async {
+    final db = await database;
+    final result = await db.query(
+      'favoritos',
+      where: 'userId = ? AND tipo = ? AND itemId = ?',
+      whereArgs: [userId, 'compuesto', compoundId],
+    );
+    return result.isNotEmpty;
+  }
+
+  Future<bool> isBrandFavorite({
+    required String userId,
+    required String brandId,
+  }) async {
+    final db = await database;
+    final result = await db.query(
+      'favoritos',
+      where: 'userId = ? AND tipo = ? AND itemId = ?',
+      whereArgs: [userId, 'marca', brandId],
+    );
+    return result.isNotEmpty;
+  }
+
+  Future<List<Compuesto>> getFavoriteCompounds(String userId) async {
+    final db = await database;
+
+    final favorites = await db.query(
+      'favoritos',
+      where: 'userId = ? AND tipo = ?',
+      whereArgs: [userId, 'compuesto'],
+      orderBy: 'fechaAgregado DESC',
+    );
+
+    List<Compuesto> compounds = [];
+
+    for (var fav in favorites) {
+      final compoundId = fav['itemId'] as String;
+      final compound = await getCompuestoById(compoundId);
+      if (compound != null) {
+        compounds.add(compound);
+      }
+    }
+
+    return compounds;
+  }
+
+  Future<List<Marca>> getFavoriteBrands(String userId) async {
+    final db = await database;
+
+    final favorites = await db.query(
+      'favoritos',
+      where: 'userId = ? AND tipo = ?',
+      whereArgs: [userId, 'marca'],
+      orderBy: 'fechaAgregado DESC',
+    );
+
+    List<Marca> brands = [];
+
+    for (var fav in favorites) {
+      final brandId = fav['itemId'] as String;
+      final brand = await getMarcaById(brandId);
+      if (brand != null) {
+        brands.add(brand);
+      }
+    }
+
+    return brands;
   }
 }

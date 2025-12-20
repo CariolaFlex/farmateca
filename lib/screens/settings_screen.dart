@@ -1,198 +1,872 @@
+// lib/screens/settings_screen.dart
+
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:animate_do/animate_do.dart';
+import '../utils/app_colors.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
-import '../utils/constants.dart';
+import '../providers/preferences_provider.dart';
+import 'paywall_screen.dart';
 import 'auth/login_screen.dart';
 import 'auth/terms_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
   @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
-    final themeProvider = context.watch<ThemeProvider>();
+    final authProvider = Provider.of<AuthProvider>(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final prefsProvider = Provider.of<PreferencesProvider>(context);
     final isDark = themeProvider.isDarkMode;
 
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey.shade100,
       appBar: AppBar(
-        title: const Text('Configuración'),
-        backgroundColor: AppColors.primaryBlue,
+        title: const Text(
+          'Configuración',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: AppColors.primaryDark,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Sección Usuario
-          _buildSectionTitle('Cuenta'),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppColors.primaryBlue,
-                    child: Text(
-                      (authProvider.userName.isNotEmpty
-                              ? authProvider.userName[0]
-                              : 'U')
-                          .toUpperCase(),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  title: Text(
-                    authProvider.userName.isNotEmpty
-                        ? authProvider.userName
-                        : 'Usuario',
-                  ),
-                  subtitle: Text(authProvider.userEmail ?? 'Sin correo'),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.workspace_premium),
-                  title: const Text('Plan actual'),
-                  subtitle: const Text('Plan Gratuito'),
-                  trailing: TextButton(
-                    onPressed: () {
-                      // TODO: Ir a pantalla de suscripción
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Próximamente: Planes Premium'),
-                        ),
-                      ); // ← Cambiar coma por punto y coma
-                    },
-                    child: const Text('Mejorar'),
-                  ),
-                ),
-              ],
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        child: Column(
+          children: [
+            // PERFIL DE USUARIO (Mejorado)
+            FadeInDown(
+              duration: const Duration(milliseconds: 400),
+              child: _buildProfileSection(authProvider, isDark),
             ),
-          ),
 
-          const SizedBox(height: 24),
+            const SizedBox(height: 8),
 
-          // Sección Apariencia
-          _buildSectionTitle('Apariencia'),
-          Card(
-            child: SwitchListTile(
-              secondary: Icon(isDark ? Icons.dark_mode : Icons.light_mode),
-              title: const Text('Modo oscuro'),
-              subtitle: Text(isDark ? 'Activado' : 'Desactivado'),
-              value: isDark,
-              onChanged: (_) => themeProvider.toggleTheme(),
+            // PLAN ACTUAL (Con navegación a premium)
+            FadeInLeft(
+              duration: const Duration(milliseconds: 400),
+              delay: const Duration(milliseconds: 100),
+              child: _buildPlanSection(context, authProvider, isDark),
             ),
-          ),
 
-          const SizedBox(height: 24),
+            const SizedBox(height: 8),
 
-          // Sección Legal
-          _buildSectionTitle('Legal'),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.description),
-                  title: const Text('Términos y Condiciones'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const TermsScreen()),
-                  ),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.privacy_tip),
-                  title: const Text('Política de Privacidad'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    // TODO: Crear pantalla de privacidad
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Próximamente')),
-                    );
-                  },
-                ),
-              ],
+            // APARIENCIA (Dark Mode existente)
+            FadeInRight(
+              duration: const Duration(milliseconds: 400),
+              delay: const Duration(milliseconds: 200),
+              child: _buildAppearanceSection(themeProvider, isDark),
             ),
-          ),
 
-          const SizedBox(height: 24),
+            const SizedBox(height: 8),
 
-          // Sección Información
-          _buildSectionTitle('Información'),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.info),
-                  title: const Text('Versión'),
-                  trailing: Text(
-                    AppStrings.appVersion,
-                    style: TextStyle(color: Colors.grey.shade600),
-                  ),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.business),
-                  title: const Text('Desarrollado por'),
-                  subtitle: Text(AppConstants.companyNameFull),
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.email),
-                  title: const Text('Soporte'),
-                  subtitle: Text(AppConstants.supportEmail),
-                  onTap: () {
-                    // TODO: Abrir email
-                  },
-                ),
-              ],
+            // TIPOGRAFÍA (NUEVO)
+            FadeInLeft(
+              duration: const Duration(milliseconds: 400),
+              delay: const Duration(milliseconds: 300),
+              child: _buildTypographySection(prefsProvider, isDark),
             ),
-          ),
 
-          const SizedBox(height: 32),
+            const SizedBox(height: 8),
 
-          // Botón Cerrar Sesión
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => _showLogoutDialog(context, authProvider),
-              icon: const Icon(Icons.logout, color: AppColors.alertRed),
-              label: const Text(
-                'Cerrar Sesión',
-                style: TextStyle(color: AppColors.alertRed),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.alertRed),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
+            // LEGAL
+            FadeInRight(
+              duration: const Duration(milliseconds: 400),
+              delay: const Duration(milliseconds: 400),
+              child: _buildLegalSection(isDark),
             ),
-          ),
 
-          const SizedBox(height: 32),
-        ],
-      ),
-    );
-  }
+            const SizedBox(height: 8),
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: AppColors.primaryBlue,
+            // INFORMACIÓN
+            FadeInUp(
+              duration: const Duration(milliseconds: 400),
+              delay: const Duration(milliseconds: 500),
+              child: _buildInfoSection(isDark),
+            ),
+
+            const SizedBox(height: 16),
+
+            // CERRAR SESIÓN
+            FadeInUp(
+              duration: const Duration(milliseconds: 400),
+              delay: const Duration(milliseconds: 600),
+              child: _buildLogoutButton(authProvider),
+            ),
+
+            const SizedBox(height: 16),
+
+            // FOOTER (Sin cuadro, al final)
+            _buildFooter(isDark),
+
+            const SizedBox(height: 32),
+          ],
         ),
       ),
     );
   }
 
-  void _showLogoutDialog(BuildContext context, AuthProvider authProvider) {
+  // ===== PERFIL MEJORADO =====
+  Widget _buildProfileSection(AuthProvider authProvider, bool isDark) {
+    final userModel = authProvider.userModel;
+    final displayName = userModel?.displayName ?? authProvider.userName;
+    final email = authProvider.userEmail;
+    final photoURL = userModel?.photoURL;
+    final nivel = userModel?.nivelDisplay;
+    final area = userModel?.areaDisplay;
+
+    return Container(
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primaryDark,
+            AppColors.primaryMedium,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryDark.withValues(alpha: 0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showEditProfileModal(authProvider),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                // FOTO DE PERFIL (con opción de cambiar)
+                Stack(
+                  children: [
+                    Hero(
+                      tag: 'profile_avatar',
+                      child: CircleAvatar(
+                        radius: 40,
+                        backgroundColor: Colors.white,
+                        backgroundImage:
+                            photoURL != null ? NetworkImage(photoURL) : null,
+                        child: photoURL == null
+                            ? Text(
+                                displayName.isNotEmpty
+                                    ? displayName[0].toUpperCase()
+                                    : 'U',
+                                style: TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryDark,
+                                ),
+                              )
+                            : null,
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.camera_alt,
+                          size: 16,
+                          color: AppColors.primaryDark,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(width: 16),
+
+                // INFORMACIÓN
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        displayName.isNotEmpty ? displayName : 'Usuario',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        email,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // ROL Y ÁREA (si existen)
+                      if (nivel != null &&
+                          nivel != 'No especificado' &&
+                          area != null &&
+                          area.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '$nivel - $area',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                // ÍCONO EDITAR
+                Icon(
+                  Icons.edit,
+                  color: Colors.white.withValues(alpha: 0.8),
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ===== PLAN ACTUAL (con navegación) =====
+  Widget _buildPlanSection(
+      BuildContext context, AuthProvider authProvider, bool isDark) {
+    final isPremium = authProvider.userModel?.isPremium ?? false;
+
+    return _buildCard(
+      isDark: isDark,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionTitle('Plan Actual', Icons.workspace_premium, isDark),
+          const SizedBox(height: 12),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const PaywallScreen(),
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryDark.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.primaryDark.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: isPremium
+                            ? AppColors.premiumGold.withValues(alpha: 0.2)
+                            : AppColors.primaryDark.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isPremium ? Icons.star : Icons.card_membership,
+                        color:
+                            isPremium ? AppColors.premiumGold : AppColors.primaryDark,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isPremium ? 'Plan Premium' : 'Plan Gratuito',
+                            style: TextStyle(
+                              color: isDark ? Colors.white : Colors.black87,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            isPremium
+                                ? 'Acceso completo a todo el contenido'
+                                : 'Acceso limitado a contenido',
+                            style: TextStyle(
+                              color: isDark ? Colors.white70 : Colors.black54,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!isPremium)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.primaryDark,
+                              AppColors.primaryMedium,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          'Mejorar',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===== APARIENCIA (MANTENER DARK MODE EXISTENTE) =====
+  Widget _buildAppearanceSection(ThemeProvider themeProvider, bool isDark) {
+    return _buildCard(
+      isDark: isDark,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionTitle('Apariencia', Icons.palette, isDark),
+          const SizedBox(height: 12),
+          // Dark Mode toggle - MANTENER FUNCIONALIDAD EXISTENTE
+          SwitchListTile(
+            secondary: Icon(
+              isDark ? Icons.dark_mode : Icons.light_mode,
+              color: AppColors.primaryDark,
+            ),
+            title: Text(
+              'Modo oscuro',
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black87,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            subtitle: Text(
+              isDark ? 'Activado' : 'Desactivado',
+              style: TextStyle(
+                color: isDark ? Colors.white70 : Colors.black54,
+              ),
+            ),
+            value: isDark,
+            onChanged: (_) => themeProvider.toggleTheme(),
+            activeColor: AppColors.primaryDark,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===== TIPOGRAFÍA (NUEVO) =====
+  Widget _buildTypographySection(PreferencesProvider prefs, bool isDark) {
+    return _buildCard(
+      isDark: isDark,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionTitle('Tipografía', Icons.text_fields, isDark),
+          const SizedBox(height: 16),
+
+          // SELECTOR DE FUENTE
+          Row(
+            children: [
+              Icon(
+                Icons.font_download,
+                color: AppColors.primaryDark,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tipo de letra',
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: prefs.preferences.fontFamily,
+                      decoration: InputDecoration(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: AppColors.primaryDark.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: AppColors.primaryDark.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: AppColors.primaryDark,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      dropdownColor:
+                          isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                      items: PreferencesProvider.availableFonts
+                          .map((font) => DropdownMenuItem(
+                                value: font,
+                                child: Text(
+                                  font,
+                                  style: TextStyle(
+                                    fontFamily: font,
+                                    color:
+                                        isDark ? Colors.white : Colors.black87,
+                                  ),
+                                ),
+                              ))
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          prefs.setFontFamily(value);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // SLIDER DE TAMAÑO
+          Row(
+            children: [
+              Icon(
+                Icons.format_size,
+                color: AppColors.primaryDark,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Tamaño de letra',
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Text(
+                          '${prefs.preferences.fontSize.toInt()}px',
+                          style: TextStyle(
+                            color: AppColors.primaryDark,
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SliderTheme(
+                      data: SliderThemeData(
+                        activeTrackColor: AppColors.primaryDark,
+                        inactiveTrackColor:
+                            AppColors.primaryDark.withValues(alpha: 0.2),
+                        thumbColor: AppColors.primaryDark,
+                        overlayColor:
+                            AppColors.primaryDark.withValues(alpha: 0.2),
+                      ),
+                      child: Slider(
+                        value: prefs.preferences.fontSize,
+                        min: PreferencesProvider.minFontSize,
+                        max: PreferencesProvider.maxFontSize,
+                        divisions: 12,
+                        label: '${prefs.preferences.fontSize.toInt()}',
+                        onChanged: (value) => prefs.setFontSize(value),
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Pequeña',
+                          style: TextStyle(
+                            color: isDark ? Colors.white60 : Colors.black45,
+                            fontSize: 11,
+                          ),
+                        ),
+                        Text(
+                          'Grande',
+                          style: TextStyle(
+                            color: isDark ? Colors.white60 : Colors.black45,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // PREVIEW
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.grey.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'Texto de ejemplo: Farmateca es una enciclopedia farmacológica completa.',
+              style: TextStyle(
+                fontFamily: prefs.preferences.fontFamily,
+                fontSize: prefs.preferences.fontSize,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===== LEGAL =====
+  Widget _buildLegalSection(bool isDark) {
+    return _buildCard(
+      isDark: isDark,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionTitle('Legal', Icons.gavel, isDark),
+          const SizedBox(height: 8),
+          _buildListTile(
+            icon: Icons.description,
+            title: 'Términos y Condiciones',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const TermsScreen()),
+            ),
+            isDark: isDark,
+          ),
+          Divider(
+            height: 1,
+            color: isDark ? Colors.white12 : Colors.black12,
+          ),
+          _buildListTile(
+            icon: Icons.privacy_tip,
+            title: 'Política de Privacidad',
+            onTap: () => _showPrivacyDialog(),
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===== INFORMACIÓN =====
+  Widget _buildInfoSection(bool isDark) {
+    return _buildCard(
+      isDark: isDark,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionTitle('Información', Icons.info, isDark),
+          const SizedBox(height: 8),
+          _buildInfoTile(
+            icon: Icons.code,
+            title: 'Versión',
+            subtitle: 'v1.0.0',
+            isDark: isDark,
+          ),
+          Divider(
+            height: 1,
+            color: isDark ? Colors.white12 : Colors.black12,
+          ),
+          _buildInfoTile(
+            icon: Icons.email,
+            title: 'Soporte',
+            subtitle: 'soporte@farmateca.cl',
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===== CERRAR SESIÓN =====
+  Widget _buildLogoutButton(AuthProvider authProvider) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showLogoutDialog(authProvider),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.red.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.red.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.logout,
+                  color: Colors.red.shade600,
+                  size: 22,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Cerrar Sesión',
+                  style: TextStyle(
+                    color: Colors.red.shade600,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ===== FOOTER (sin cuadro) =====
+  Widget _buildFooter(bool isDark) {
+    return Column(
+      children: [
+        Text(
+          'Desarrollado por',
+          style: TextStyle(
+            color: isDark ? Colors.white54 : Colors.black45,
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Vectium SpA',
+          style: TextStyle(
+            color: isDark ? Colors.white70 : Colors.black54,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ===== WIDGETS HELPER =====
+  Widget _buildCard({required bool isDark, required Widget child}) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  Widget _buildSectionTitle(String title, IconData icon, bool isDark) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          color: AppColors.primaryDark,
+          size: 20,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: TextStyle(
+            color: AppColors.primaryDark,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildListTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    required bool isDark,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+          child: Row(
+            children: [
+              Icon(icon, color: AppColors.primaryDark, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black87,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: isDark ? Colors.white38 : Colors.black38,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool isDark,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.primaryDark, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black87,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Text(
+            subtitle,
+            style: TextStyle(
+              color: isDark ? Colors.white70 : Colors.black54,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===== MODALES =====
+  void _showEditProfileModal(AuthProvider authProvider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => EditProfileModal(authProvider: authProvider),
+    );
+  }
+
+  void _showLogoutDialog(AuthProvider authProvider) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Cerrar Sesión'),
-        content: const Text('¿Estás seguro que deseas cerrar sesión?'),
+        content: const Text('¿Estás seguro de que quieres cerrar sesión?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -202,7 +876,7 @@ class SettingsScreen extends StatelessWidget {
             onPressed: () async {
               Navigator.pop(context);
               await authProvider.logout();
-              if (context.mounted) {
+              if (mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                   (route) => false,
@@ -211,11 +885,458 @@ class SettingsScreen extends StatelessWidget {
             },
             child: const Text(
               'Cerrar Sesión',
-              style: TextStyle(color: AppColors.alertRed),
+              style: TextStyle(color: Colors.red),
             ),
           ),
         ],
       ),
     );
+  }
+
+  void _showPrivacyDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Política de Privacidad'),
+        content: const SingleChildScrollView(
+          child: Text(
+            'Farmateca respeta tu privacidad y protege tus datos personales. '
+            'La información que proporcionas se utiliza únicamente para mejorar '
+            'tu experiencia en la aplicación y no se comparte con terceros sin tu consentimiento.\n\n'
+            'Para más información, contacta a soporte@farmateca.cl',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cerrar',
+              style: TextStyle(color: AppColors.primaryDark),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ===== MODAL DE EDICIÓN DE PERFIL =====
+class EditProfileModal extends StatefulWidget {
+  final AuthProvider authProvider;
+
+  const EditProfileModal({super.key, required this.authProvider});
+
+  @override
+  State<EditProfileModal> createState() => _EditProfileModalState();
+}
+
+class _EditProfileModalState extends State<EditProfileModal> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _aliasController;
+  String? _selectedNivel;
+  String? _selectedArea;
+  final ImagePicker _picker = ImagePicker();
+  bool _isUploading = false;
+
+  final List<String> niveles = ['estudiante', 'interno', 'profesional'];
+  final List<String> nivelesDisplay = ['Estudiante', 'Interno(a)', 'Profesional'];
+
+  final List<String> areas = [
+    'medicina',
+    'enfermeria',
+    'quimica',
+    'kinesiologia',
+    'obstetricia',
+    'nutricion',
+    'tens',
+    'otra',
+  ];
+  final List<String> areasDisplay = [
+    'Medicina',
+    'Enfermería',
+    'Química y Farmacia',
+    'Kinesiología',
+    'Obstetricia',
+    'Nutrición',
+    'TENS',
+    'Otra',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    final userModel = widget.authProvider.userModel;
+    _aliasController = TextEditingController(text: userModel?.alias);
+    _selectedNivel = userModel?.nivel;
+    _selectedArea = userModel?.area;
+  }
+
+  @override
+  void dispose() {
+    _aliasController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final userModel = widget.authProvider.userModel;
+    final photoURL = userModel?.photoURL;
+    final displayName = userModel?.displayName ?? widget.authProvider.userName;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // TÍTULO
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Editar Perfil',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(
+                        Icons.close,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // FOTO
+                Center(
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 60,
+                        backgroundColor:
+                            AppColors.primaryDark.withValues(alpha: 0.1),
+                        backgroundImage:
+                            photoURL != null ? NetworkImage(photoURL) : null,
+                        child: photoURL == null
+                            ? Text(
+                                displayName.isNotEmpty
+                                    ? displayName[0].toUpperCase()
+                                    : 'U',
+                                style: TextStyle(
+                                  fontSize: 40,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryDark,
+                                ),
+                              )
+                            : null,
+                      ),
+                      if (_isUploading)
+                        Positioned.fill(
+                          child: CircleAvatar(
+                            radius: 60,
+                            backgroundColor: Colors.black54,
+                            child: const CircularProgressIndicator(
+                              valueColor:
+                                  AlwaysStoppedAnimation(Colors.white),
+                            ),
+                          ),
+                        ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: PopupMenuButton<String>(
+                          icon: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.primaryDark,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.2),
+                                  blurRadius: 8,
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                          onSelected: (value) {
+                            if (value == 'camera') {
+                              _pickImage(ImageSource.camera);
+                            } else if (value == 'gallery') {
+                              _pickImage(ImageSource.gallery);
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'camera',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.camera_alt),
+                                  SizedBox(width: 12),
+                                  Text('Tomar foto'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'gallery',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.photo_library),
+                                  SizedBox(width: 12),
+                                  Text('Elegir de galería'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // ALIAS
+                TextFormField(
+                  controller: _aliasController,
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                  decoration: InputDecoration(
+                    labelText: 'Alias o Apodo',
+                    labelStyle:
+                        TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+                    hintText: 'Cómo quieres que te llamemos',
+                    hintStyle:
+                        TextStyle(color: isDark ? Colors.white38 : Colors.black38),
+                    prefixIcon: Icon(
+                      Icons.person_outline,
+                      color: AppColors.primaryDark,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          BorderSide(color: AppColors.primaryDark, width: 2),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // NIVEL
+                DropdownButtonFormField<String>(
+                  value: _selectedNivel,
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                  dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                  decoration: InputDecoration(
+                    labelText: 'Rol Profesional',
+                    labelStyle:
+                        TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+                    prefixIcon: Icon(
+                      Icons.work_outline,
+                      color: AppColors.primaryDark,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          BorderSide(color: AppColors.primaryDark, width: 2),
+                    ),
+                  ),
+                  items: List.generate(
+                    niveles.length,
+                    (index) => DropdownMenuItem(
+                      value: niveles[index],
+                      child: Text(nivelesDisplay[index]),
+                    ),
+                  ),
+                  onChanged: (value) => setState(() => _selectedNivel = value),
+                ),
+
+                const SizedBox(height: 16),
+
+                // ÁREA
+                DropdownButtonFormField<String>(
+                  value: _selectedArea,
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                  dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                  decoration: InputDecoration(
+                    labelText: 'Área de Salud',
+                    labelStyle:
+                        TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+                    prefixIcon: Icon(
+                      Icons.medical_services_outlined,
+                      color: AppColors.primaryDark,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          BorderSide(color: AppColors.primaryDark, width: 2),
+                    ),
+                  ),
+                  items: List.generate(
+                    areas.length,
+                    (index) => DropdownMenuItem(
+                      value: areas[index],
+                      child: Text(areasDisplay[index]),
+                    ),
+                  ),
+                  onChanged: (value) => setState(() => _selectedArea = value),
+                ),
+
+                const SizedBox(height: 24),
+
+                // BOTÓN GUARDAR
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isUploading ? null : _saveProfile,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryDark,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _isUploading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor:
+                                  AlwaysStoppedAnimation(Colors.white),
+                            ),
+                          )
+                        : const Text(
+                            'Guardar Cambios',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        setState(() => _isUploading = true);
+
+        // Subir a Firebase Storage
+        final ref = FirebaseStorage.instance
+            .ref()
+            .child('profile_photos')
+            .child('${widget.authProvider.firebaseUser!.uid}.jpg');
+
+        await ref.putFile(File(image.path));
+        final photoURL = await ref.getDownloadURL();
+
+        // Actualizar perfil (AuthProvider notificará los cambios)
+        await widget.authProvider.updateUserProfile(
+          photoURL: photoURL,
+        );
+
+        setState(() => _isUploading = false);
+
+        if (mounted) {
+          // Cerrar modal para forzar rebuild del padre con nueva foto
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Foto actualizada exitosamente'),
+              backgroundColor: Colors.green.shade600,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() => _isUploading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al subir foto: $e'),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        setState(() => _isUploading = true);
+
+        await widget.authProvider.updateUserProfile(
+          alias: _aliasController.text.trim().isNotEmpty
+              ? _aliasController.text.trim()
+              : null,
+          nivel: _selectedNivel,
+          area: _selectedArea,
+        );
+
+        setState(() => _isUploading = false);
+
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Perfil actualizado exitosamente')),
+          );
+        }
+      } catch (e) {
+        setState(() => _isUploading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error al actualizar: $e')),
+          );
+        }
+      }
+    }
   }
 }

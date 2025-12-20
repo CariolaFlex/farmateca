@@ -1,10 +1,14 @@
 // lib/screens/detail/compound_detail_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../models/medication_models.dart';
 import '../../utils/constants.dart';
+import '../../utils/app_colors.dart' as teal;
 import '../../services/database_helper.dart';
+import '../../services/favorites_service.dart';
 import '../../widgets/premium_locked_section.dart';
+import '../../providers/auth_provider.dart';
 import '../paywall_screen.dart';
 import 'brand_detail_screen.dart';
 
@@ -23,6 +27,117 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
   // TODO: Implementar lógica real con RevenueCat cuando esté configurado
   bool get isUserPremium => false; // Por ahora todos FREE para testing
 
+  // === FAVORITOS ===
+  final FavoritesService _favoritesService = FavoritesService();
+  bool _isFavorite = false;
+  bool _isLoadingFavorite = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfFavorite();
+  }
+
+  Future<void> _checkIfFavorite() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userId = authProvider.firebaseUser?.uid;
+
+    if (userId != null) {
+      final isFav = await _favoritesService.isCompoundFavorite(
+        userId: userId,
+        compoundId: widget.compuesto.idPa,
+      );
+
+      setState(() {
+        _isFavorite = isFav;
+        _isLoadingFavorite = false;
+      });
+    } else {
+      setState(() {
+        _isLoadingFavorite = false;
+      });
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userId = authProvider.firebaseUser?.uid;
+
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Inicia sesión para guardar favoritos'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoadingFavorite = true);
+
+    try {
+      if (_isFavorite) {
+        await _favoritesService.removeCompoundFromFavorites(
+          userId: userId,
+          compoundId: widget.compuesto.idPa,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.heart_broken, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('Eliminado de favoritos'),
+                ],
+              ),
+              backgroundColor: Colors.grey.shade700,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        await _favoritesService.addCompoundToFavorites(
+          userId: userId,
+          compound: widget.compuesto,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.favorite, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text('Agregado a favoritos'),
+                ],
+              ),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+
+      setState(() {
+        _isFavorite = !_isFavorite;
+        _isLoadingFavorite = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingFavorite = false);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error al actualizar favoritos'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _navigateToPaywall() {
     Navigator.push(
       context,
@@ -37,11 +152,11 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // AppBar con gradiente
+          // AppBar con gradiente TEAL
           SliverAppBar(
             expandedHeight: 180,
             pinned: true,
-            backgroundColor: AppColors.primaryBlue,
+            backgroundColor: teal.AppColors.primaryDark,
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
                 compuesto.pa,
@@ -53,7 +168,7 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
               ),
               background: Container(
                 decoration: const BoxDecoration(
-                  gradient: AppColors.primaryGradient,
+                  gradient: teal.AppColors.primaryGradient,
                 ),
                 child: Center(
                   child: Column(
@@ -79,14 +194,26 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
             ),
             actions: [
               // Botón de favorito
-              IconButton(
-                icon: const Icon(Icons.favorite_border, color: Colors.white),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Agregado a favoritos')),
-                  );
-                },
-              ),
+              _isLoadingFavorite
+                  ? const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                    )
+                  : IconButton(
+                      icon: Icon(
+                        _isFavorite ? Icons.favorite : Icons.favorite_border,
+                        color: _isFavorite ? Colors.red : Colors.white,
+                      ),
+                      onPressed: _toggleFavorite,
+                    ),
             ],
           ),
 
@@ -97,12 +224,8 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Badge de acceso (GRATIS - todos los compuestos son accesibles)
-                  _buildAccessBadge(),
-                  const SizedBox(height: 16),
-
                   // ============================================
-                  // SECCIONES EN NUEVO ORDEN
+                  // SECCIONES REORDENADAS: GRATIS primero, PREMIUM después
                   // ============================================
 
                   // 1. Familia Farmacológica (GRATIS)
@@ -110,7 +233,7 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
                     icon: Icons.category,
                     title: 'Familia Farmacológica',
                     content: compuesto.familia,
-                    color: AppColors.primaryBlue,
+                    color: teal.AppColors.primaryDark,
                     isDark: isDark,
                   ),
 
@@ -119,42 +242,44 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
                     icon: Icons.medical_information,
                     title: 'Uso Clínico',
                     content: compuesto.uso,
-                    color: AppColors.secondaryTeal,
+                    color: teal.AppColors.primaryMedium,
                     isDark: isDark,
                   ),
 
-                  // 3. Posología (PREMIUM 🔒)
-                  _buildConditionalSection(
-                    icon: Icons.schedule,
-                    title: 'Posología',
-                    content: compuesto.posologia,
-                    color: AppColors.successGreen,
-                    isDark: isDark,
-                    isPremium: true,
-                  ),
-
-                  // 4. Consideraciones Especiales (PREMIUM 🔒)
-                  if (compuesto.consideraciones.isNotEmpty)
-                    _buildConditionalSection(
-                      icon: Icons.info_outline,
-                      title: 'Consideraciones Especiales',
-                      content: compuesto.consideraciones,
-                      color: AppColors.warningOrange,
-                      isDark: isDark,
-                      isPremium: true,
-                    ),
-
-                  // 5. Mecanismo de Acción (GRATIS)
+                  // 3. Mecanismo de Acción (GRATIS) - MOVIDO AQUÍ antes de premium
                   if (compuesto.mecanismo.isNotEmpty)
                     _buildExpandableCard(
                       icon: Icons.psychology,
                       title: 'Mecanismo de Acción',
                       content: compuesto.mecanismo,
-                      color: AppColors.primaryBlue,
+                      color: teal.AppColors.primaryDark,
                       isDark: isDark,
                     ),
 
-                  // 6. Efectos Adversos (PREMIUM 🔒) ⬆️ MOVIDO ARRIBA
+                  // === SECCIONES PREMIUM (con candado) ===
+
+                  // 4. Posología (PREMIUM 🔒)
+                  _buildConditionalSection(
+                    icon: Icons.schedule,
+                    title: 'Posología',
+                    content: compuesto.posologia,
+                    color: teal.AppColors.successGreen,
+                    isDark: isDark,
+                    isPremium: true,
+                  ),
+
+                  // 5. Consideraciones Especiales (PREMIUM 🔒)
+                  if (compuesto.consideraciones.isNotEmpty)
+                    _buildConditionalSection(
+                      icon: Icons.info_outline,
+                      title: 'Consideraciones Especiales',
+                      content: compuesto.consideraciones,
+                      color: teal.AppColors.warningOrange,
+                      isDark: isDark,
+                      isPremium: true,
+                    ),
+
+                  // 6. Efectos Adversos (PREMIUM 🔒)
                   if (compuesto.efectos.isNotEmpty)
                     _buildConditionalSection(
                       icon: Icons.warning_amber,
@@ -166,16 +291,16 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
                       contentColor: const Color(0xFF26A69A),
                     ),
 
-                  // 7. Contraindicaciones (PREMIUM 🔒) ⬆️ MOVIDO ARRIBA
+                  // 7. Contraindicaciones (PREMIUM 🔒)
                   if (compuesto.contraindicaciones.isNotEmpty)
                     _buildConditionalSection(
                       icon: Icons.dangerous,
                       title: 'Contraindicaciones',
                       content: compuesto.contraindicaciones,
-                      color: AppColors.alertRed,
+                      color: teal.AppColors.alertRed,
                       isDark: isDark,
                       isPremium: true,
-                      contentColor: AppColors.alertRed,
+                      contentColor: teal.AppColors.alertRed,
                     ),
 
                   // 8 y 9. Marcas Comerciales y Genéricos (PREMIUM 🔒) ⬇️ MOVIDO ABAJO
@@ -218,7 +343,7 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
                               isPremium: true,
                               isDark: isDark,
                               icon: Icons.local_pharmacy,
-                              color: AppColors.secondaryTeal,
+                              color: teal.AppColors.primaryMedium,
                             ),
 
                           // Genéricos
@@ -229,7 +354,7 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
                               isPremium: true,
                               isDark: isDark,
                               icon: Icons.medication,
-                              color: Colors.blue,
+                              color: teal.AppColors.primaryDark,
                             ),
                         ],
                       );
@@ -257,36 +382,6 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
     return await dbHelper.getMarcasByCompuestoId(compuesto.idPa);
   }
 
-  /// Badge que indica acceso GRATIS (nuevo modelo: todos los compuestos accesibles)
-  Widget _buildAccessBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.successGreen,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.lock_open,
-            size: 14,
-            color: Colors.white,
-          ),
-          SizedBox(width: 4),
-          Text(
-            'GRATIS',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   /// Card de información simple (siempre visible)
   Widget _buildInfoCard({
     required IconData icon,
@@ -299,7 +394,7 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : Colors.white,
+        color: isDark ? teal.AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -359,7 +454,7 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : Colors.white,
+        color: isDark ? teal.AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -422,7 +517,7 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
       return Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.cardDark : Colors.white,
+          color: isDark ? teal.AppColors.surfaceDark : Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -438,12 +533,12 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.premiumGold.withAlpha(26),
+                color: teal.AppColors.premiumGold.withAlpha(26),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
                 Icons.lock,
-                color: AppColors.premiumGold,
+                color: teal.AppColors.premiumGold,
                 size: 20,
               ),
             ),
@@ -463,7 +558,7 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
                 ),
                 const Icon(
                   Icons.star,
-                  color: AppColors.premiumGold,
+                  color: teal.AppColors.premiumGold,
                   size: 16,
                 ),
               ],
@@ -504,7 +599,7 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
       return Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.cardDark : Colors.white,
+          color: isDark ? teal.AppColors.surfaceDark : Colors.white,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -520,12 +615,12 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.premiumGold.withAlpha(26),
+                color: teal.AppColors.premiumGold.withAlpha(26),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
                 Icons.lock,
-                color: AppColors.premiumGold,
+                color: teal.AppColors.premiumGold,
                 size: 20,
               ),
             ),
@@ -545,7 +640,7 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
                 ),
                 const Icon(
                   Icons.star,
-                  color: AppColors.premiumGold,
+                  color: teal.AppColors.premiumGold,
                   size: 16,
                 ),
               ],
@@ -565,7 +660,7 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : Colors.white,
+        color: isDark ? teal.AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(

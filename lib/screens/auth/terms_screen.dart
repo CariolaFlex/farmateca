@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../utils/constants.dart';
+import '../../utils/app_colors.dart' as teal;
 import '../../widgets/custom_button.dart';
 
 class TermsScreen extends StatelessWidget {
@@ -19,11 +20,11 @@ class TermsScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: isDark
-          ? AppColors.backgroundDark
-          : AppColors.backgroundLight,
+          ? teal.AppColors.backgroundDark
+          : teal.AppColors.backgroundLight,
       appBar: AppBar(
         title: const Text('Términos y Condiciones'),
-        backgroundColor: AppColors.primaryBlue,
+        backgroundColor: teal.AppColors.primaryDark,
         foregroundColor: Colors.white,
       ),
       body: Column(
@@ -98,10 +99,10 @@ class TermsScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.alertRed.withAlpha(26),
+                      color: teal.AppColors.alertRed.withAlpha(26),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppColors.alertRed.withAlpha(77),
+                        color: teal.AppColors.alertRed.withAlpha(77),
                       ),
                     ),
                     child: const Row(
@@ -109,14 +110,14 @@ class TermsScreen extends StatelessWidget {
                       children: [
                         Icon(
                           Icons.warning_amber_rounded,
-                          color: AppColors.alertRed,
+                          color: teal.AppColors.alertRed,
                         ),
                         SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             'IMPORTANTE: Esta aplicación no debe ser utilizada por pacientes o público general para la automedicación. Cualquier decisión de salud debe ser supervisada por un profesional calificado.',
                             style: TextStyle(
-                              color: AppColors.alertRed,
+                              color: teal.AppColors.alertRed,
                               fontSize: 13,
                             ),
                           ),
@@ -134,7 +135,7 @@ class TermsScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.cardDark : Colors.white,
+                color: isDark ? teal.AppColors.surfaceDark : Colors.white,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withAlpha(13),
