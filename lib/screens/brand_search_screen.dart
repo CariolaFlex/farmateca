@@ -1,12 +1,15 @@
 // lib/screens/brand_search_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../utils/app_colors.dart';
 import '../services/database_helper.dart';
 import '../models/medication_models.dart';
+import '../providers/auth_provider.dart';
 import 'detail/brand_detail_screen.dart';
 import 'detail/laboratory_detail_screen.dart';
 import 'home_screen.dart';
+import 'paywall_screen.dart';
 
 class BrandSearchScreen extends StatefulWidget {
   const BrandSearchScreen({super.key});
@@ -26,7 +29,6 @@ class _BrandSearchScreenState extends State<BrandSearchScreen> {
 
   // Variables para filtros
   String _selectedFilter = 'Todas';
-  final List<String> _filterOptions = ['Todas', 'Comerciales', 'Genéricos'];
 
   @override
   void dispose() {
@@ -235,59 +237,87 @@ class _BrandSearchScreenState extends State<BrandSearchScreen> {
 
                 // Filtros con chips + botón circular de Laboratorios (scroll horizontal)
                 const SizedBox(height: 12),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      // Chips de filtros
-                      ..._filterOptions.map((filter) {
-                        final isSelected = _selectedFilter == filter;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: FilterChip(
-                            label: Text(
-                              filter,
-                              style: TextStyle(
-                                color: isSelected
-                                    ? Colors.white
-                                    : AppColors.primaryDark,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                            selected: isSelected,
-                            onSelected: (selected) {
+                Consumer<AuthProvider>(
+                  builder: (context, authProvider, child) {
+                    final isPremium = authProvider.isPremium;
+
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          // Chip "Todas" - siempre disponible
+                          _buildPremiumFilterChip(
+                            label: 'Todas',
+                            isSelected: _selectedFilter == 'Todas',
+                            isPremiumFilter: false,
+                            isPremiumUser: isPremium,
+                            onTap: () {
                               setState(() {
-                                _selectedFilter = filter;
+                                _selectedFilter = 'Todas';
                               });
                               _performSearch();
                             },
-                            backgroundColor: Colors.white,
-                            selectedColor: AppColors.primaryDark,
-                            checkmarkColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            elevation: 2,
                           ),
-                        );
-                      }),
-                      // Botón circular de Laboratorios
-                      const SizedBox(width: 4),
-                      _buildCircularIconButton(
-                        icon: Icons.business,
-                        isSelected: _selectedFilter == 'Laboratorios',
-                        onTap: () {
-                          setState(() {
-                            _selectedFilter = 'Laboratorios';
-                          });
-                          _performSearch();
-                        },
+                          const SizedBox(width: 8),
+
+                          // Chip "Comerciales" - PREMIUM
+                          _buildPremiumFilterChip(
+                            label: 'Comerciales',
+                            isSelected: _selectedFilter == 'Comerciales',
+                            isPremiumFilter: true,
+                            isPremiumUser: isPremium,
+                            onTap: () {
+                              if (!isPremium) {
+                                _showPremiumFilterModal('tipo de marca');
+                                return;
+                              }
+                              setState(() {
+                                _selectedFilter = 'Comerciales';
+                              });
+                              _performSearch();
+                            },
+                          ),
+                          const SizedBox(width: 8),
+
+                          // Chip "Genéricos" - PREMIUM
+                          _buildPremiumFilterChip(
+                            label: 'Genéricos',
+                            isSelected: _selectedFilter == 'Genéricos',
+                            isPremiumFilter: true,
+                            isPremiumUser: isPremium,
+                            onTap: () {
+                              if (!isPremium) {
+                                _showPremiumFilterModal('tipo de marca');
+                                return;
+                              }
+                              setState(() {
+                                _selectedFilter = 'Genéricos';
+                              });
+                              _performSearch();
+                            },
+                          ),
+
+                          // Botón circular de Laboratorios - PREMIUM
+                          const SizedBox(width: 8),
+                          _buildCircularIconButton(
+                            icon: isPremium ? Icons.business : Icons.lock,
+                            isSelected: _selectedFilter == 'Laboratorios',
+                            isPremiumLocked: !isPremium,
+                            onTap: () {
+                              if (!isPremium) {
+                                _showPremiumFilterModal('laboratorio');
+                                return;
+                              }
+                              setState(() {
+                                _selectedFilter = 'Laboratorios';
+                              });
+                              _performSearch();
+                            },
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -540,11 +570,79 @@ class _BrandSearchScreenState extends State<BrandSearchScreen> {
     );
   }
 
+  /// Chip de filtro con soporte premium
+  Widget _buildPremiumFilterChip({
+    required String label,
+    required bool isSelected,
+    required bool isPremiumFilter,
+    required bool isPremiumUser,
+    required VoidCallback onTap,
+  }) {
+    final bool isLocked = isPremiumFilter && !isPremiumUser;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primaryDark : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isLocked ? Colors.grey.shade400 : AppColors.primaryDark,
+            width: 2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withValues(alpha: 0.2),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected
+                    ? Colors.white
+                    : (isLocked ? Colors.grey.shade500 : AppColors.primaryDark),
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                fontSize: 13,
+              ),
+            ),
+            // Badge PRO si está bloqueado
+            if (isLocked) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.premiumGold,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'PRO',
+                  style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   /// Botón circular para filtros especiales (Laboratorios)
   Widget _buildCircularIconButton({
     required IconData icon,
     required bool isSelected,
     required VoidCallback onTap,
+    bool isPremiumLocked = false,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -554,7 +652,10 @@ class _BrandSearchScreenState extends State<BrandSearchScreen> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: isSelected ? AppColors.primaryDark : Colors.white,
-          border: Border.all(color: AppColors.primaryDark, width: 2),
+          border: Border.all(
+            color: isPremiumLocked ? Colors.grey.shade400 : AppColors.primaryDark,
+            width: 2,
+          ),
           boxShadow: [
             BoxShadow(
               color: isSelected
@@ -565,10 +666,195 @@ class _BrandSearchScreenState extends State<BrandSearchScreen> {
             ),
           ],
         ),
-        child: Icon(
-          icon,
-          color: isSelected ? Colors.white : AppColors.primaryDark,
-          size: 22,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(
+              icon,
+              color: isSelected
+                  ? Colors.white
+                  : (isPremiumLocked ? Colors.grey.shade500 : AppColors.primaryDark),
+              size: 22,
+            ),
+            // Badge PRO pequeño si está bloqueado
+            if (isPremiumLocked)
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: AppColors.premiumGold,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'PRO',
+                    style: TextStyle(
+                      fontSize: 6,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Muestra modal persuasivo para filtros Premium
+  void _showPremiumFilterModal(String filterType) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Ícono de candado
+            Container(
+              width: 70,
+              height: 70,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.premiumGold.withValues(alpha: 0.2),
+                    AppColors.premiumGold.withValues(alpha: 0.1),
+                  ],
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.lock_outline,
+                color: AppColors.premiumGold,
+                size: 36,
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Título
+            const Text(
+              'Filtros Avanzados',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // Badge Premium
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.premiumGold,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'FUNCIÓN PREMIUM',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Descripción
+            Text(
+              filterType == 'laboratorio'
+                  ? 'Filtra marcas por los 151 laboratorios disponibles. '
+                    'Encuentra todos los productos de tu laboratorio favorito.'
+                  : 'Filtra marcas por tipo: comerciales o genéricos. '
+                    'Encuentra exactamente lo que buscas de manera rápida.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade700,
+                height: 1.5,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Botón CTA
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PaywallScreen()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.premiumGold,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 4,
+                  shadowColor: AppColors.premiumGold.withValues(alpha: 0.4),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.workspace_premium, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Desbloquear con Premium',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Botón secundario
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Quizás más tarde',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

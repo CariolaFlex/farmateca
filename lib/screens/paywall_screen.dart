@@ -1,11 +1,13 @@
 // lib/screens/paywall_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:animate_do/animate_do.dart';
 import '../utils/app_colors.dart';
+import '../providers/auth_provider.dart';
 
-/// Pantalla de Paywall con diseño premium futurista.
-/// Por ahora SIN integración RevenueCat (solo UI mockeada).
+/// Pantalla de Paywall con diseño premium y técnicas de marketing SaaS.
+/// Incluye sistema de Trial de 7 días + planes de suscripción.
 class PaywallScreen extends StatefulWidget {
   const PaywallScreen({super.key});
 
@@ -13,11 +15,40 @@ class PaywallScreen extends StatefulWidget {
   State<PaywallScreen> createState() => _PaywallScreenState();
 }
 
-class _PaywallScreenState extends State<PaywallScreen> {
+class _PaywallScreenState extends State<PaywallScreen>
+    with SingleTickerProviderStateMixin {
   int _selectedPlanIndex = 1; // Anual seleccionado por defecto
+  bool _isActivatingTrial = false;
+
+  late AnimationController _breathingController;
+  late Animation<double> _breathingAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _breathingController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _breathingAnimation = Tween<double>(begin: 1.0, end: 1.03).animate(
+      CurvedAnimation(parent: _breathingController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _breathingController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final hasUsedTrial = authProvider.hasUsedTrial;
+    final isTrialActive = authProvider.isTrialActive;
+    final trialDaysRemaining = authProvider.trialDaysRemaining;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -30,6 +61,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
@@ -40,27 +72,52 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 // Header con gradiente
                 _buildHeader(),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
+
+                // Si trial activo, mostrar countdown
+                if (isTrialActive) ...[
+                  _buildTrialActiveCard(trialDaysRemaining),
+                  const SizedBox(height: 24),
+                ],
+
+                // Sección de Trial (solo si no ha usado trial)
+                if (!hasUsedTrial && !isTrialActive) ...[
+                  _buildTrialSection(authProvider),
+                  const SizedBox(height: 24),
+                ],
+
+                // Si ya usó trial y expiró, mostrar mensaje
+                if (hasUsedTrial && !isTrialActive) ...[
+                  _buildTrialExpiredCard(),
+                  const SizedBox(height: 24),
+                ],
+
+                // Social Proof
+                _buildSocialProof(),
+
+                const SizedBox(height: 24),
 
                 // Planes de suscripción
+                _buildPlansTitle(),
+                const SizedBox(height: 16),
                 _buildPlans(),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
                 // Características premium
                 _buildFeatures(),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
                 // Botón de suscripción
                 _buildSubscribeButton(),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
                 // Botón restaurar compras
                 _buildRestoreButton(),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // Footer legal
                 _buildLegalFooter(),
@@ -118,11 +175,12 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
             const SizedBox(height: 16),
 
-            // Título
+            // Título persuasivo
             const Text(
-              'Farmateca Premium',
+              'Desbloquea Todo el Potencial',
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 28,
+                fontSize: 26,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
@@ -132,10 +190,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
             // Subtítulo
             Text(
-              'Acceso completo a toda la información farmacológica',
+              'Únete a miles de profesionales de la salud que confían en Farmateca',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 14,
                 color: Colors.white.withValues(alpha: 0.9),
                 height: 1.4,
               ),
@@ -146,12 +204,343 @@ class _PaywallScreenState extends State<PaywallScreen> {
     );
   }
 
+  Widget _buildTrialSection(AuthProvider authProvider) {
+    return FadeInUp(
+      delay: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 600),
+      child: AnimatedBuilder(
+        animation: _breathingAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _breathingAnimation.value,
+            child: child,
+          );
+        },
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.premiumGold.withValues(alpha: 0.15),
+                AppColors.premiumGold.withValues(alpha: 0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.premiumGold,
+              width: 2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.premiumGold.withValues(alpha: 0.2),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Ícono de regalo
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: AppColors.premiumGold.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.card_giftcard,
+                  size: 32,
+                  color: AppColors.premiumGold,
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Título
+              const Text(
+                'Prueba GRATIS por 7 días',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // Subtítulo
+              Text(
+                'Acceso completo a todas las funcionalidades.\nSin tarjeta de crédito.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade700,
+                  height: 1.4,
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Botón CTA Trial
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _isActivatingTrial
+                      ? null
+                      : () => _activateTrial(authProvider),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.premiumGold,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 4,
+                    shadowColor: AppColors.premiumGold.withValues(alpha: 0.4),
+                  ),
+                  child: _isActivatingTrial
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.rocket_launch, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Comenzar Prueba Gratuita',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Disclaimer
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    size: 16,
+                    color: AppColors.successGreen,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Cancela cuando quieras. Sin compromisos.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrialActiveCard(int daysRemaining) {
+    return FadeIn(
+      duration: const Duration(milliseconds: 600),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.successGreen.withValues(alpha: 0.15),
+              AppColors.primaryLight.withValues(alpha: 0.1),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.successGreen.withValues(alpha: 0.5),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: AppColors.successGreen.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle,
+                color: AppColors.successGreen,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Prueba Gratuita Activa',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.successGreen,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Te quedan $daysRemaining día${daysRemaining != 1 ? 's' : ''} de acceso Premium',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrialExpiredCard() {
+    return FadeIn(
+      duration: const Duration(milliseconds: 600),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.grey.shade300,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.timer_off,
+                color: Colors.grey.shade600,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tu prueba gratuita ha finalizado',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Suscríbete para continuar con acceso Premium',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSocialProof() {
+    return FadeInUp(
+      delay: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 600),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        decoration: BoxDecoration(
+          color: AppColors.primaryLight.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Estrellas
+            ...List.generate(
+              5,
+              (index) => const Icon(
+                Icons.star,
+                color: AppColors.premiumGold,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Más de 1,000 profesionales confían en Farmateca',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlansTitle() {
+    return FadeInLeft(
+      delay: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 600),
+      child: const Text(
+        'Planes de Suscripción',
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: Colors.black87,
+        ),
+      ),
+    );
+  }
+
   Widget _buildPlans() {
     return Column(
       children: [
         // Plan Anual (recomendado)
         FadeInUp(
-          delay: const Duration(milliseconds: 200),
+          delay: const Duration(milliseconds: 450),
           duration: const Duration(milliseconds: 600),
           child: GestureDetector(
             onTap: () => setState(() => _selectedPlanIndex = 1),
@@ -184,31 +573,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
               child: Row(
                 children: [
                   // Radio button
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: _selectedPlanIndex == 1
-                            ? AppColors.primaryDark
-                            : Colors.grey.shade400,
-                        width: 2,
-                      ),
-                    ),
-                    child: _selectedPlanIndex == 1
-                        ? Center(
-                            child: Container(
-                              width: 12,
-                              height: 12,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppColors.primaryDark,
-                              ),
-                            ),
-                          )
-                        : null,
-                  ),
+                  _buildRadioButton(_selectedPlanIndex == 1),
 
                   const SizedBox(width: 16),
 
@@ -228,42 +593,73 @@ class _PaywallScreenState extends State<PaywallScreen> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            // Badge ahorro
+                            // Badge MEJOR VALOR
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
-                                vertical: 2,
+                                vertical: 3,
                               ),
                               decoration: BoxDecoration(
-                                color: AppColors.premiumGold,
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.premiumGold,
+                                    AppColors.premiumGold.withValues(alpha: 0.8),
+                                  ],
+                                ),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: const Text(
-                                'AHORRA 20%',
+                                'AHORRA 40%',
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 9,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
+                                  letterSpacing: 0.5,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          r'CLP $28.990/año',
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: Colors.grey.shade600,
-                          ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Text(
+                              r'$2.990',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryDark,
+                              ),
+                            ),
+                            Text(
+                              ' /mes',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          r'Solo $2.416 al mes',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.successGreen,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Text(
+                              r'Facturado $35.880/año',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              r'$59.880',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade400,
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -276,7 +672,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
         // Plan Mensual
         FadeInUp(
-          delay: const Duration(milliseconds: 300),
+          delay: const Duration(milliseconds: 500),
           duration: const Duration(milliseconds: 600),
           child: GestureDetector(
             onTap: () => setState(() => _selectedPlanIndex = 0),
@@ -307,36 +703,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
               ),
               child: Row(
                 children: [
-                  // Radio button
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: _selectedPlanIndex == 0
-                            ? AppColors.primaryDark
-                            : Colors.grey.shade400,
-                        width: 2,
-                      ),
-                    ),
-                    child: _selectedPlanIndex == 0
-                        ? Center(
-                            child: Container(
-                              width: 12,
-                              height: 12,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppColors.primaryDark,
-                              ),
-                            ),
-                          )
-                        : null,
-                  ),
+                  _buildRadioButton(_selectedPlanIndex == 0),
 
                   const SizedBox(width: 16),
 
-                  // Info del plan
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,13 +719,25 @@ class _PaywallScreenState extends State<PaywallScreen> {
                             color: Colors.black87,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          r'CLP $2.990/mes',
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: Colors.grey.shade600,
-                          ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Text(
+                              r'$4.990',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryDark,
+                              ),
+                            ),
+                            Text(
+                              ' /mes',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -369,27 +751,53 @@ class _PaywallScreenState extends State<PaywallScreen> {
     );
   }
 
+  Widget _buildRadioButton(bool isSelected) {
+    return Container(
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isSelected ? AppColors.primaryDark : Colors.grey.shade400,
+          width: 2,
+        ),
+      ),
+      child: isSelected
+          ? Center(
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primaryDark,
+                ),
+              ),
+            )
+          : null,
+    );
+  }
+
   Widget _buildFeatures() {
     final features = [
       {
-        'icon': Icons.check_circle,
-        'title': 'Acceso completo',
-        'subtitle': 'Más de 450 compuestos farmacológicos',
+        'icon': Icons.filter_alt,
+        'title': 'Filtros avanzados',
+        'subtitle': 'Busca por familia, laboratorio y tipo',
       },
       {
-        'icon': Icons.local_pharmacy,
-        'title': 'Información detallada',
-        'subtitle': 'Posología, efectos adversos y contraindicaciones',
+        'icon': Icons.science,
+        'title': 'Información completa',
+        'subtitle': 'Posología, efectos adversos, interacciones',
       },
       {
-        'icon': Icons.medical_information,
-        'title': 'Base de datos actualizada',
-        'subtitle': 'Registro ISP Chile y guías MINSAL',
+        'icon': Icons.medication,
+        'title': '200+ compuestos y 2,500+ marcas',
+        'subtitle': 'Base de datos actualizada constantemente',
       },
       {
         'icon': Icons.wifi_off,
-        'title': 'Funciona sin internet',
-        'subtitle': 'Acceso offline a toda la información',
+        'title': 'Acceso offline',
+        'subtitle': 'Funciona sin conexión a internet',
       },
       {
         'icon': Icons.favorite,
@@ -397,9 +805,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
         'subtitle': 'Guarda todos tus medicamentos frecuentes',
       },
       {
-        'icon': Icons.update,
-        'title': 'Actualizaciones constantes',
-        'subtitle': 'Nuevos compuestos y marcas regularmente',
+        'icon': Icons.support_agent,
+        'title': 'Soporte prioritario',
+        'subtitle': 'Respuesta rápida a tus consultas',
       },
     ];
 
@@ -407,7 +815,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         FadeInLeft(
-          delay: const Duration(milliseconds: 400),
+          delay: const Duration(milliseconds: 550),
           duration: const Duration(milliseconds: 600),
           child: const Text(
             '¿Qué incluye Premium?',
@@ -424,28 +832,28 @@ class _PaywallScreenState extends State<PaywallScreen> {
           Map<String, dynamic> feature = entry.value;
 
           return FadeInLeft(
-            delay: Duration(milliseconds: 500 + (index * 100)),
-            duration: const Duration(milliseconds: 600),
+            delay: Duration(milliseconds: 600 + (index * 80)),
+            duration: const Duration(milliseconds: 500),
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.only(bottom: 14),
               child: Row(
                 children: [
-                  // Ícono
+                  // Checkmark verde
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: 28,
+                    height: 28,
                     decoration: BoxDecoration(
-                      color: AppColors.primaryLight.withValues(alpha: 0.2),
+                      color: AppColors.successGreen.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      feature['icon'] as IconData,
-                      color: AppColors.primaryDark,
-                      size: 24,
+                    child: const Icon(
+                      Icons.check,
+                      color: AppColors.successGreen,
+                      size: 18,
                     ),
                   ),
 
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 14),
 
                   // Texto
                   Expanded(
@@ -455,16 +863,15 @@ class _PaywallScreenState extends State<PaywallScreen> {
                         Text(
                           feature['title'] as String,
                           style: const TextStyle(
-                            fontSize: 15,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: Colors.black87,
                           ),
                         ),
-                        const SizedBox(height: 2),
                         Text(
                           feature['subtitle'] as String,
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 12,
                             color: Colors.grey.shade600,
                           ),
                         ),
@@ -482,7 +889,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
   Widget _buildSubscribeButton() {
     return FadeInUp(
-      delay: const Duration(milliseconds: 1000),
+      delay: const Duration(milliseconds: 900),
       duration: const Duration(milliseconds: 600),
       child: Container(
         width: double.infinity,
@@ -516,8 +923,8 @@ class _PaywallScreenState extends State<PaywallScreen> {
             child: Center(
               child: Text(
                 _selectedPlanIndex == 1
-                    ? r'Suscribirse - $28.990/año'
-                    : r'Suscribirse - $2.990/mes',
+                    ? r'Suscribirse - $35.880/año'
+                    : r'Suscribirse - $4.990/mes',
                 style: const TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
@@ -533,7 +940,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
   Widget _buildRestoreButton() {
     return FadeInUp(
-      delay: const Duration(milliseconds: 1100),
+      delay: const Duration(milliseconds: 950),
       duration: const Duration(milliseconds: 600),
       child: Center(
         child: TextButton(
@@ -544,7 +951,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
           child: const Text(
             'Restaurar Compras',
             style: TextStyle(
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
               color: AppColors.primaryDark,
             ),
@@ -556,7 +963,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
   Widget _buildLegalFooter() {
     return FadeIn(
-      delay: const Duration(milliseconds: 1200),
+      delay: const Duration(milliseconds: 1000),
       duration: const Duration(milliseconds: 600),
       child: Text(
         'Al suscribirte, aceptas los Términos de Servicio y la Política de Privacidad. La suscripción se renueva automáticamente a menos que se cancele 24 horas antes del fin del período.',
@@ -568,6 +975,59 @@ class _PaywallScreenState extends State<PaywallScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _activateTrial(AuthProvider authProvider) async {
+    setState(() => _isActivatingTrial = true);
+
+    final success = await authProvider.activateTrial();
+
+    setState(() => _isActivatingTrial = false);
+
+    if (success && mounted) {
+      // Mostrar diálogo de éxito
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Icon(Icons.celebration, color: AppColors.premiumGold, size: 28),
+              const SizedBox(width: 10),
+              const Text('¡Prueba Activada!'),
+            ],
+          ),
+          content: const Text(
+            'Tienes 7 días de acceso Premium completo. '
+            '¡Disfruta de todas las funcionalidades!',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pop(context); // Cerrar PaywallScreen
+              },
+              child: Text(
+                'Comenzar a explorar',
+                style: TextStyle(
+                  color: AppColors.primaryDark,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (mounted) {
+      // Mostrar error
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo activar la prueba. Intenta nuevamente.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _showComingSoonDialog() {
@@ -584,7 +1044,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
         ),
         content: const Text(
           'El sistema de suscripciones estará disponible pronto. '
-          'Por ahora, toda la app está en modo beta gratuito.',
+          'Por ahora, usa la Prueba Gratuita de 7 días para acceder a todas las funciones.',
         ),
         actions: [
           TextButton(

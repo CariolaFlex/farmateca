@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../utils/app_colors.dart';
 import '../config/app_config.dart';
+import '../widgets/trial_expiring_dialog.dart';
 import 'search_screen.dart';
 import 'brand_search_screen.dart';
 import 'favorites_screen.dart';
@@ -35,6 +36,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
     _breathingAnimation = Tween<double>(begin: 1.0, end: 1.02).animate(
       CurvedAnimation(parent: _breathingController, curve: Curves.easeInOut),
+    );
+
+    // Verificar si mostrar diálogo de expiración de trial
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkTrialExpiringDialog();
+    });
+  }
+
+  /// Verifica y muestra el diálogo de trial si está por expirar
+  Future<void> _checkTrialExpiringDialog() async {
+    if (!mounted) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isTrialExpiring = authProvider.isTrialExpiring;
+    final trialDaysRemaining = authProvider.trialDaysRemaining;
+
+    await TrialExpiringDialog.showIfNeeded(
+      context: context,
+      isTrialExpiring: isTrialExpiring,
+      daysRemaining: trialDaysRemaining,
     );
   }
 

@@ -15,6 +15,11 @@ class UserModel {
   final SubscriptionStatus suscripcion;
   final List<String> favoritosSincronizados;
 
+  // === TRIAL DE 7 DÍAS ===
+  final DateTime? trialStartDate; // Fecha de inicio del trial
+  final DateTime? trialEndDate; // Fecha de fin del trial
+  final bool hasUsedTrial; // Si ya usó el trial (solo 1 vez por usuario)
+
   UserModel({
     required this.uid,
     required this.email,
@@ -29,9 +34,39 @@ class UserModel {
     required this.preferencias,
     required this.suscripcion,
     this.favoritosSincronizados = const [],
+    this.trialStartDate,
+    this.trialEndDate,
+    this.hasUsedTrial = false,
   });
 
+  /// Verifica si el usuario tiene suscripción premium activa
   bool get isPremium => suscripcion.isActive;
+
+  /// Verifica si el trial está activo (dentro del período de 7 días)
+  bool get isTrialActive {
+    if (trialStartDate == null || trialEndDate == null) return false;
+    if (!hasUsedTrial) return false;
+    return DateTime.now().isBefore(trialEndDate!);
+  }
+
+  /// Días restantes del trial (0 si expirado o no activo)
+  int get trialDaysRemaining {
+    if (!isTrialActive) return 0;
+    final remaining = trialEndDate!.difference(DateTime.now()).inDays;
+    return remaining < 0 ? 0 : remaining + 1; // +1 porque el día actual cuenta
+  }
+
+  /// Indica si el trial está por expirar (≤2 días restantes)
+  bool get isTrialExpiring {
+    return isTrialActive && trialDaysRemaining <= 2;
+  }
+
+  /// Indica si el trial ya expiró (usó trial pero ya pasó la fecha)
+  bool get isTrialExpired {
+    if (!hasUsedTrial) return false;
+    if (trialEndDate == null) return false;
+    return DateTime.now().isAfter(trialEndDate!);
+  }
 
   /// Obtiene el nombre legible del nivel
   String get nivelDisplay {
@@ -99,6 +134,10 @@ class UserModel {
       favoritosSincronizados: List<String>.from(
         data['favoritos_sincronizados'] ?? [],
       ),
+      // Trial fields
+      trialStartDate: (data['trial_start_date'] as Timestamp?)?.toDate(),
+      trialEndDate: (data['trial_end_date'] as Timestamp?)?.toDate(),
+      hasUsedTrial: data['has_used_trial'] ?? false,
     );
   }
 
@@ -117,6 +156,14 @@ class UserModel {
       'preferencias': preferencias.toMap(),
       'suscripcion': suscripcion.toMap(),
       'favoritos_sincronizados': favoritosSincronizados,
+      // Trial fields
+      'trial_start_date': trialStartDate != null
+          ? Timestamp.fromDate(trialStartDate!)
+          : null,
+      'trial_end_date': trialEndDate != null
+          ? Timestamp.fromDate(trialEndDate!)
+          : null,
+      'has_used_trial': hasUsedTrial,
     };
   }
 
@@ -134,6 +181,9 @@ class UserModel {
     UserPreferences? preferencias,
     SubscriptionStatus? suscripcion,
     List<String>? favoritosSincronizados,
+    DateTime? trialStartDate,
+    DateTime? trialEndDate,
+    bool? hasUsedTrial,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -150,6 +200,9 @@ class UserModel {
       suscripcion: suscripcion ?? this.suscripcion,
       favoritosSincronizados:
           favoritosSincronizados ?? this.favoritosSincronizados,
+      trialStartDate: trialStartDate ?? this.trialStartDate,
+      trialEndDate: trialEndDate ?? this.trialEndDate,
+      hasUsedTrial: hasUsedTrial ?? this.hasUsedTrial,
     );
   }
 

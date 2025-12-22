@@ -31,20 +31,41 @@ class AuthProvider extends ChangeNotifier {
   bool get isDeveloperPremiumActive => _isDeveloperPremiumActive;
 
   /// Verifica si el usuario tiene acceso Premium.
-  /// Considera: 1) Developer Mode (para testing), 2) Suscripción activa en Firestore
+  /// Considera: 1) Developer Mode, 2) Trial activo, 3) Suscripción real
   /// En el futuro se agregará RevenueCat aquí.
   bool get isPremium {
     // 1. Developer Mode para testing (solo en debug)
     if (_isDeveloperPremiumActive) {
       return true;
     }
-    // 2. Verificar suscripción activa en UserModel
+    // 2. Verificar Trial activo (7 días)
+    if (_userModel?.isTrialActive == true) {
+      return true;
+    }
+    // 3. Verificar suscripción activa en UserModel
     if (_userModel?.isPremium == true) {
       return true;
     }
-    // 3. Por defecto, usuario Free
+    // 4. Por defecto, usuario Free
     return false;
   }
+
+  // === TRIAL GETTERS ===
+
+  /// Indica si el trial está activo
+  bool get isTrialActive => _userModel?.isTrialActive ?? false;
+
+  /// Días restantes del trial
+  int get trialDaysRemaining => _userModel?.trialDaysRemaining ?? 0;
+
+  /// Indica si el trial está por expirar (≤2 días)
+  bool get isTrialExpiring => _userModel?.isTrialExpiring ?? false;
+
+  /// Indica si el usuario ya usó su trial
+  bool get hasUsedTrial => _userModel?.hasUsedTrial ?? false;
+
+  /// Indica si el trial ya expiró
+  bool get isTrialExpired => _userModel?.isTrialExpired ?? false;
 
   AuthProvider() {
     _init();
@@ -244,6 +265,55 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       debugPrint('Error reloading user data: $e');
+    }
+  }
+
+  // ==========================================
+  // TRIAL DE 7 DÍAS
+  // ==========================================
+
+  /// Activa el trial de 7 días para el usuario actual.
+  /// Solo se puede activar UNA VEZ por usuario.
+  /// Retorna true si se activó exitosamente, false si ya lo usó o hubo error.
+  Future<bool> activateTrial() async {
+    if (_firebaseUser == null) {
+      debugPrint('❌ No hay usuario autenticado para activar trial');
+      return false;
+    }
+
+    // Verificar si ya usó el trial
+    if (_userModel?.hasUsedTrial == true) {
+      debugPrint('❌ Usuario ya usó su trial gratuito');
+      return false;
+    }
+
+    try {
+      final now = DateTime.now();
+      final trialEnd = now.add(const Duration(days: 7));
+
+      // Actualizar Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(_firebaseUser!.uid)
+          .update({
+        'trial_start_date': Timestamp.fromDate(now),
+        'trial_end_date': Timestamp.fromDate(trialEnd),
+        'has_used_trial': true,
+      });
+
+      // Actualizar modelo local
+      _userModel = _userModel?.copyWith(
+        trialStartDate: now,
+        trialEndDate: trialEnd,
+        hasUsedTrial: true,
+      );
+
+      notifyListeners();
+      debugPrint('✅ Trial activado exitosamente. Expira: $trialEnd');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Error activando trial: $e');
+      return false;
     }
   }
 }

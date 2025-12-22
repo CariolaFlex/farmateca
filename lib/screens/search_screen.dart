@@ -1,13 +1,16 @@
 // lib/screens/search_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../utils/app_colors.dart' as teal;
 import '../services/database_helper.dart';
 import '../models/medication_models.dart';
+import '../providers/auth_provider.dart';
 import 'detail/compound_detail_screen.dart';
 import 'detail/brand_detail_screen.dart';
 import 'detail/family_detail_screen.dart';
 import 'home_screen.dart';
+import 'paywall_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   final String? searchType; // 'compuesto', 'marca', o null para búsqueda global
@@ -28,6 +31,45 @@ class _SearchScreenState extends State<SearchScreen> {
   String _currentFilter = 'todos';
   bool _showFamilyFilter = false; // Para filtro por familia en compuestos
 
+  // === FAMILIAS FARMACOLÓGICAS (Premium) ===
+  final Set<String> _selectedFamilies = {};
+  static const List<String> _allFamilies = [
+    'Analgésicos',
+    'Anestésicos',
+    'Ansiolíticos',
+    'Antiácidos',
+    'Antialérgicos',
+    'Antiarrítmicos',
+    'Antibióticos',
+    'Anticoagulantes',
+    'Anticonvulsivantes',
+    'Antidepresivos',
+    'Antidiabéticos',
+    'Antidiarreicos',
+    'Antieméticos',
+    'Antifúngicos',
+    'Antigotosos',
+    'Antihipertensivos',
+    'Antihistamínicos',
+    'Antiinflamatorios',
+    'Antimicóticos',
+    'Antiparasitarios',
+    'Antipsicóticos',
+    'Antivirales',
+    'Broncodilatadores',
+    'Cardiotónicos',
+    'Corticosteroides',
+    'Diuréticos',
+    'Expectorantes',
+    'Gastroprotectores',
+    'Hipnóticos',
+    'Hipolipemiantes',
+    'Inmunosupresores',
+    'Laxantes',
+    'Relajantes musculares',
+    'Vasodilatadores',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -44,7 +86,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Future<void> _performSearch(String query) async {
     // Si está en modo familia, no requiere query
-    if (query.trim().isEmpty && !_showFamilyFilter) {
+    // También permitir búsqueda si hay familias seleccionadas
+    if (query.trim().isEmpty && !_showFamilyFilter && _selectedFamilies.isEmpty) {
       setState(() {
         _results = [];
         _filteredFamilies = [];
@@ -92,6 +135,20 @@ class _SearchScreenState extends State<SearchScreen> {
               globalResults['compuestos'] as List<dynamic>? ?? [];
           final marcas = globalResults['marcas'] as List<dynamic>? ?? [];
           results = [...compuestos, ...marcas];
+      }
+
+      // === FILTRO PREMIUM POR FAMILIA ===
+      // Si hay familias seleccionadas, filtrar los compuestos
+      if (_selectedFamilies.isNotEmpty && widget.searchType == 'compuesto') {
+        results = results.where((item) {
+          if (item is Compuesto) {
+            // Buscar coincidencia parcial de familia
+            return _selectedFamilies.any((selectedFamily) =>
+                item.familia.toLowerCase().contains(selectedFamily.toLowerCase()) ||
+                selectedFamily.toLowerCase().contains(item.familia.toLowerCase()));
+          }
+          return true;
+        }).toList();
       }
 
       setState(() {
@@ -234,53 +291,108 @@ class _SearchScreenState extends State<SearchScreen> {
 
           // Botón de filtro por Familia (solo si es búsqueda de compuestos)
           if (widget.searchType == 'compuesto')
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  _buildFilterChip('Todos', 'todos'),
-                  const SizedBox(width: 12),
-                  // Botón con label "Por Familia"
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _showFamilyFilter = !_showFamilyFilter;
-                      });
-                      _performSearch(_searchController.text);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: _showFamilyFilter ? teal.AppColors.primaryDark : Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: teal.AppColors.primaryDark,
-                          width: 2,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.category,
-                            size: 20,
-                            color: _showFamilyFilter ? Colors.white : teal.AppColors.primaryDark,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Por Familia',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: _showFamilyFilter ? Colors.white : teal.AppColors.primaryDark,
+            Consumer<AuthProvider>(
+              builder: (context, authProvider, child) {
+                final isPremium = authProvider.isPremium;
+
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      _buildFilterChip('Todos', 'todos'),
+                      const SizedBox(width: 12),
+                      // Botón con label "Por Familia" - PREMIUM
+                      GestureDetector(
+                        onTap: () {
+                          if (!isPremium) {
+                            _showPremiumFilterModal();
+                            return;
+                          }
+                          // Mostrar modal de selección de familias
+                          _showFamilySelectionModal();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _selectedFamilies.isNotEmpty
+                                ? teal.AppColors.primaryDark
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isPremium
+                                  ? teal.AppColors.primaryDark
+                                  : Colors.grey.shade400,
+                              width: 2,
                             ),
                           ),
-                        ],
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Ícono de candado o categoría según Premium
+                              Icon(
+                                isPremium ? Icons.category : Icons.lock,
+                                size: 20,
+                                color: _selectedFamilies.isNotEmpty
+                                    ? Colors.white
+                                    : (isPremium ? teal.AppColors.primaryDark : Colors.grey.shade500),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _selectedFamilies.isEmpty
+                                    ? 'Por Familia'
+                                    : '${_selectedFamilies.length} familia${_selectedFamilies.length > 1 ? 's' : ''}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: _selectedFamilies.isNotEmpty
+                                      ? Colors.white
+                                      : (isPremium ? teal.AppColors.primaryDark : Colors.grey.shade500),
+                                ),
+                              ),
+                              // Badge PRO si no es premium
+                              if (!isPremium) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: teal.AppColors.premiumGold,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'PRO',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              // Botón para limpiar filtros si hay familias seleccionadas
+                              if (_selectedFamilies.isNotEmpty) ...[
+                                const SizedBox(width: 6),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedFamilies.clear();
+                                    });
+                                    _performSearch(_searchController.text);
+                                  },
+                                  child: const Icon(
+                                    Icons.close,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
 
           // Resultados
@@ -641,6 +753,389 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  /// Muestra modal persuasivo para filtros Premium
+  void _showPremiumFilterModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Ícono de candado
+            Container(
+              width: 70,
+              height: 70,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    teal.AppColors.premiumGold.withValues(alpha: 0.2),
+                    teal.AppColors.premiumGold.withValues(alpha: 0.1),
+                  ],
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.lock_outline,
+                color: teal.AppColors.premiumGold,
+                size: 36,
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Título
+            const Text(
+              'Filtros Avanzados',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // Badge Premium
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: teal.AppColors.premiumGold,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'FUNCIÓN PREMIUM',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Descripción
+            Text(
+              'Filtra compuestos por las 34 familias farmacológicas '
+              'disponibles. Encuentra exactamente lo que necesitas de '
+              'manera rápida y precisa.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade700,
+                height: 1.5,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Botón CTA
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PaywallScreen()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: teal.AppColors.premiumGold,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 4,
+                  shadowColor: teal.AppColors.premiumGold.withValues(alpha: 0.4),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.workspace_premium, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Desbloquear con Premium',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Botón secundario
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Quizás más tarde',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Muestra modal de selección de familias farmacológicas (Premium)
+  void _showFamilySelectionModal() {
+    // Copia temporal de las familias seleccionadas para el modal
+    final Set<String> tempSelectedFamilies = Set.from(_selectedFamilies);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.shade200,
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Handle
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Título y contador
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Filtrar por Familia',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${tempSelectedFamilies.length} de ${_allFamilies.length} seleccionadas',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        // Botón limpiar
+                        if (tempSelectedFamilies.isNotEmpty)
+                          TextButton(
+                            onPressed: () {
+                              setModalState(() {
+                                tempSelectedFamilies.clear();
+                              });
+                            },
+                            child: Text(
+                              'Limpiar',
+                              style: TextStyle(
+                                color: teal.AppColors.primaryDark,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Lista de familias
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  itemCount: _allFamilies.length,
+                  itemBuilder: (context, index) {
+                    final family = _allFamilies[index];
+                    final isSelected = tempSelectedFamilies.contains(family);
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Material(
+                        color: isSelected
+                            ? teal.AppColors.primaryLight.withValues(alpha: 0.15)
+                            : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        child: InkWell(
+                          onTap: () {
+                            setModalState(() {
+                              if (isSelected) {
+                                tempSelectedFamilies.remove(family);
+                              } else {
+                                tempSelectedFamilies.add(family);
+                              }
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: isSelected
+                                    ? teal.AppColors.primaryDark
+                                    : Colors.transparent,
+                                width: 2,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                // Ícono
+                                Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? teal.AppColors.primaryDark
+                                        : Colors.grey.shade200,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    isSelected ? Icons.check : Icons.category,
+                                    size: 18,
+                                    color: isSelected ? Colors.white : Colors.grey.shade600,
+                                  ),
+                                ),
+
+                                const SizedBox(width: 14),
+
+                                // Nombre de la familia
+                                Expanded(
+                                  child: Text(
+                                    family,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                      color: isSelected
+                                          ? teal.AppColors.primaryDark
+                                          : Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // Botón aplicar
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.shade200,
+                      blurRadius: 8,
+                      offset: const Offset(0, -4),
+                    ),
+                  ],
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedFamilies.clear();
+                        _selectedFamilies.addAll(tempSelectedFamilies);
+                      });
+                      Navigator.pop(context);
+                      // Ejecutar búsqueda con los filtros aplicados
+                      _performSearch(_searchController.text);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: teal.AppColors.primaryDark,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      elevation: 2,
+                    ),
+                    child: Text(
+                      tempSelectedFamilies.isEmpty
+                          ? 'Mostrar todos los compuestos'
+                          : 'Aplicar ${tempSelectedFamilies.length} filtro${tempSelectedFamilies.length > 1 ? 's' : ''}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

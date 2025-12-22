@@ -314,7 +314,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ===== PLAN ACTUAL (con navegación) =====
   Widget _buildPlanSection(
       BuildContext context, AuthProvider authProvider, bool isDark) {
-    final isPremium = authProvider.userModel?.isPremium ?? false;
+    final userModel = authProvider.userModel;
+    final isPremiumSubscription = userModel?.isPremium ?? false;
+    final isTrialActive = authProvider.isTrialActive;
+    final hasUsedTrial = authProvider.hasUsedTrial;
+    final trialDaysRemaining = authProvider.trialDaysRemaining;
+    final isTrialExpiring = authProvider.isTrialExpiring;
+    final isPremium = authProvider.isPremium; // Incluye trial activo
 
     return _buildCard(
       isDark: isDark,
@@ -323,6 +329,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           _buildSectionTitle('Plan Actual', Icons.workspace_premium, isDark),
           const SizedBox(height: 12),
+
+          // === TRIAL ACTIVO - Mostrar countdown ===
+          if (isTrialActive) ...[
+            _buildTrialCountdownCard(
+              isDark: isDark,
+              daysRemaining: trialDaysRemaining,
+              isExpiring: isTrialExpiring,
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // === TRIAL EXPIRADO ===
+          if (hasUsedTrial && !isTrialActive && !isPremiumSubscription) ...[
+            _buildTrialExpiredCard(isDark: isDark),
+            const SizedBox(height: 12),
+          ],
+
+          // === NUNCA HA USADO TRIAL ===
+          if (!hasUsedTrial && !isPremiumSubscription) ...[
+            _buildTrialOfferCard(isDark: isDark, authProvider: authProvider),
+            const SizedBox(height: 12),
+          ],
+
+          // === CARD DE PLAN PRINCIPAL ===
           Material(
             color: Colors.transparent,
             child: InkWell(
@@ -367,7 +397,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isPremium ? 'Plan Premium' : 'Plan Gratuito',
+                            isPremiumSubscription
+                                ? 'Plan Premium'
+                                : (isTrialActive ? 'Prueba Gratuita' : 'Plan Gratuito'),
                             style: TextStyle(
                               color: isDark ? Colors.white : Colors.black87,
                               fontSize: 16,
@@ -376,9 +408,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            isPremium
+                            isPremiumSubscription
                                 ? 'Acceso completo a todo el contenido'
-                                : 'Acceso limitado a contenido',
+                                : (isTrialActive
+                                    ? 'Acceso Premium temporal'
+                                    : 'Acceso limitado a contenido'),
                             style: TextStyle(
                               color: isDark ? Colors.white70 : Colors.black54,
                               fontSize: 13,
@@ -387,7 +421,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                     ),
-                    if (!isPremium)
+                    if (!isPremiumSubscription)
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -402,9 +436,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Text(
-                          'Mejorar',
-                          style: TextStyle(
+                        child: Text(
+                          isTrialActive ? 'Suscribirse' : 'Mejorar',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -417,6 +451,331 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Card con countdown de trial activo
+  Widget _buildTrialCountdownCard({
+    required bool isDark,
+    required int daysRemaining,
+    required bool isExpiring,
+  }) {
+    final progressValue = daysRemaining / 7.0;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isExpiring
+              ? [
+                  Colors.orange.shade100,
+                  Colors.red.shade50,
+                ]
+              : [
+                  AppColors.successGreen.withValues(alpha: 0.15),
+                  AppColors.primaryLight.withValues(alpha: 0.1),
+                ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isExpiring
+              ? Colors.orange.shade300
+              : AppColors.successGreen.withValues(alpha: 0.5),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isExpiring
+                      ? Colors.orange.withValues(alpha: 0.2)
+                      : AppColors.successGreen.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isExpiring ? Icons.timer : Icons.card_giftcard,
+                  color: isExpiring ? Colors.orange.shade700 : AppColors.successGreen,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isExpiring
+                          ? 'Tu prueba termina pronto'
+                          : 'Prueba Gratuita Activa',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: isExpiring
+                            ? Colors.orange.shade800
+                            : AppColors.successGreen,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Te quedan $daysRemaining día${daysRemaining != 1 ? 's' : ''} de acceso Premium',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.white70 : Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          // Barra de progreso
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: progressValue,
+              minHeight: 8,
+              backgroundColor: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isExpiring ? Colors.orange : AppColors.successGreen,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          // Etiquetas de progreso
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '$daysRemaining días restantes',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: isExpiring ? Colors.orange.shade700 : AppColors.successGreen,
+                ),
+              ),
+              Text(
+                '7 días totales',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark ? Colors.white54 : Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+
+          // Botón de suscripción si está expirando
+          if (isExpiring) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PaywallScreen()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryDark,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text(
+                  'Suscribirse Ahora',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Card cuando el trial ha expirado
+  Widget _buildTrialExpiredCard({required bool isDark}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.timer_off,
+              color: Colors.grey.shade600,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tu prueba ha finalizado',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white70 : Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Suscríbete para seguir disfrutando',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.white54 : Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PaywallScreen()),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primaryDark,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Text(
+                'Ver planes',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Card para ofrecer trial a usuarios que nunca lo han usado
+  Widget _buildTrialOfferCard({
+    required bool isDark,
+    required AuthProvider authProvider,
+  }) {
+    return GestureDetector(
+      onTap: () async {
+        final success = await authProvider.activateTrial();
+        if (success && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('¡Prueba gratuita de 7 días activada!'),
+              backgroundColor: AppColors.successGreen,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.premiumGold.withValues(alpha: 0.15),
+              AppColors.premiumGold.withValues(alpha: 0.05),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.premiumGold,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.premiumGold.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.card_giftcard,
+                color: AppColors.premiumGold,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Prueba GRATIS 7 días',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Acceso completo sin compromiso',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.premiumGold,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                'Activar',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
