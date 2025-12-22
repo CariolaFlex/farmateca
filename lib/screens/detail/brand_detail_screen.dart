@@ -25,8 +25,11 @@ class BrandDetailScreen extends StatefulWidget {
 class _BrandDetailScreenState extends State<BrandDetailScreen> {
   Marca get marca => widget.marca;
 
-  // TODO: Implementar lógica real con RevenueCat cuando esté configurado
-  bool get isUserPremium => false; // Por ahora todos FREE para testing
+  /// Verifica si el usuario tiene acceso Premium (incluye Developer Mode)
+  bool get isUserPremium {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    return authProvider.isPremium;
+  }
 
   // === FAVORITOS ===
   final FavoritesService _favoritesService = FavoritesService();

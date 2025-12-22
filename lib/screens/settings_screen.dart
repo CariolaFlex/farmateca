@@ -1,6 +1,7 @@
 // lib/screens/settings_screen.dart
 
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -110,6 +111,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
 
             const SizedBox(height: 8),
+
+            // MODO DESARROLLADOR (Solo visible en debug)
+            if (kDebugMode)
+              FadeInUp(
+                duration: const Duration(milliseconds: 400),
+                delay: const Duration(milliseconds: 350),
+                child: _buildDeveloperSection(authProvider, isDark),
+              ),
+
+            if (kDebugMode) const SizedBox(height: 8),
 
             // LEGAL
             FadeInRight(
@@ -632,6 +643,140 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 fontSize: prefs.preferences.fontSize,
                 color: isDark ? Colors.white : Colors.black87,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===== MODO DESARROLLADOR (Solo visible en kDebugMode) =====
+  Widget _buildDeveloperSection(AuthProvider authProvider, bool isDark) {
+    final isDevPremium = authProvider.isDeveloperPremiumActive;
+
+    return _buildCard(
+      isDark: isDark,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Título con icono de herramienta en rojo
+          Row(
+            children: [
+              Icon(
+                Icons.build_circle,
+                color: AppColors.alertRed,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Modo Desarrollador',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.alertRed,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Switch para activar Premium de prueba
+          SwitchListTile(
+            secondary: Icon(
+              Icons.workspace_premium,
+              color: isDevPremium ? AppColors.premiumGold : (isDark ? Colors.white54 : Colors.grey),
+            ),
+            title: Text(
+              'Activar Modo Premium',
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black87,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            subtitle: Text(
+              'Simula acceso Premium para testing',
+              style: TextStyle(
+                color: isDark ? Colors.white54 : Colors.black54,
+                fontSize: 12,
+              ),
+            ),
+            value: isDevPremium,
+            onChanged: (value) async {
+              await authProvider.setDeveloperPremium(value);
+            },
+            activeColor: AppColors.premiumGold,
+            contentPadding: EdgeInsets.zero,
+          ),
+
+          // Badge "DEV MODE ACTIVO" cuando está activado
+          if (isDevPremium) ...[
+            const SizedBox(height: 12),
+            FadeIn(
+              duration: const Duration(milliseconds: 300),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.premiumGold.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppColors.premiumGold.withValues(alpha: 0.5),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.check_circle,
+                      color: AppColors.premiumGold,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'DEV MODE ACTIVO',
+                      style: TextStyle(
+                        color: AppColors.premiumGold,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 12),
+
+          // Nota de advertencia
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.grey.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: isDark ? Colors.white54 : Colors.black45,
+                  size: 18,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Este modo no estará disponible en producción.',
+                    style: TextStyle(
+                      color: isDark ? Colors.white54 : Colors.black54,
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

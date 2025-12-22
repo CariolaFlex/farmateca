@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:animate_do/animate_do.dart';
@@ -81,34 +82,66 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       },
                       child: Row(
                         children: [
-                          // Avatar con foto de perfil
-                          Hero(
-                            tag: 'profile_avatar',
-                            child: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    AppColors.primaryDark,
-                                    AppColors.primaryMedium,
-                                  ],
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.primaryMedium.withValues(alpha: 0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
+                          // Avatar con foto de perfil + badge DEV si Developer Mode activo
+                          Stack(
+                            children: [
+                              Hero(
+                                tag: 'profile_avatar',
+                                child: Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        AppColors.primaryDark,
+                                        AppColors.primaryMedium,
+                                      ],
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.primaryMedium.withValues(alpha: 0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                  child: ClipOval(
+                                    child: _buildAvatarContent(authProvider),
+                                  ),
+                                ),
                               ),
-                              child: ClipOval(
-                                child: _buildAvatarContent(authProvider),
-                              ),
-                            ),
+                              // Badge DEV (solo visible en debug + Developer Mode activo)
+                              if (kDebugMode && authProvider.isDeveloperPremiumActive)
+                                Positioned(
+                                  top: 0,
+                                  right: 0,
+                                  child: Container(
+                                    width: 20,
+                                    height: 20,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.premiumGold,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: isDark ? AppColors.backgroundDark : Colors.white,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: const Center(
+                                      child: Text(
+                                        'D',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                           const SizedBox(width: 12),
                           Column(

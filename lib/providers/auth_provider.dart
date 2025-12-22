@@ -3,17 +3,20 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
+import '../services/developer_mode_service.dart';
 
 enum AuthStatus { initial, authenticated, unauthenticated }
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
+  final DeveloperModeService _devModeService = DeveloperModeService();
 
   User? _firebaseUser;
   UserModel? _userModel;
   bool _isLoading = false;
   String? _errorMessage;
   AuthStatus _status = AuthStatus.initial;
+  bool _isDeveloperPremiumActive = false;
 
   User? get firebaseUser => _firebaseUser;
   UserModel? get userModel => _userModel;
@@ -24,12 +27,45 @@ class AuthProvider extends ChangeNotifier {
   String get userName => _userModel?.nombre ?? _firebaseUser?.displayName ?? '';
   String get userEmail => _userModel?.email ?? _firebaseUser?.email ?? '';
 
+  /// Indica si el modo desarrollador premium está activo (para testing)
+  bool get isDeveloperPremiumActive => _isDeveloperPremiumActive;
+
+  /// Verifica si el usuario tiene acceso Premium.
+  /// Considera: 1) Developer Mode (para testing), 2) Suscripción activa en Firestore
+  /// En el futuro se agregará RevenueCat aquí.
+  bool get isPremium {
+    // 1. Developer Mode para testing (solo en debug)
+    if (_isDeveloperPremiumActive) {
+      return true;
+    }
+    // 2. Verificar suscripción activa en UserModel
+    if (_userModel?.isPremium == true) {
+      return true;
+    }
+    // 3. Por defecto, usuario Free
+    return false;
+  }
+
   AuthProvider() {
     _init();
   }
 
   void _init() {
     _authService.authStateChanges.listen(_onAuthStateChanged);
+    _loadDeveloperModeState();
+  }
+
+  /// Carga el estado del Developer Mode desde SharedPreferences
+  Future<void> _loadDeveloperModeState() async {
+    _isDeveloperPremiumActive = await _devModeService.isDeveloperPremiumActive();
+    notifyListeners();
+  }
+
+  /// Activa o desactiva el Developer Mode Premium
+  Future<void> setDeveloperPremium(bool value) async {
+    await _devModeService.setDeveloperPremium(value);
+    _isDeveloperPremiumActive = value;
+    notifyListeners();
   }
 
   void _onAuthStateChanged(User? user) async {
