@@ -21,6 +21,7 @@ class AppColors {
   static const Color premiumGold = Color(0xFFFFB800);
   static const Color favoritesRed = Color(0xFFFF6B6B);
   static const Color comingSoonGray = grayMedium;
+  static const Color compoundBlue = Color(0xFF1565C0); // Azul marino para compuestos
 
   static const Color success = Color(0xFF4CAF50);
   static const Color error = Color(0xFFF44336);

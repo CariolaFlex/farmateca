@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
 import '../utils/app_colors.dart';
 import '../config/app_config.dart';
 import 'search_screen.dart';
@@ -45,12 +47,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
     final userName = authProvider.userName.isNotEmpty
         ? authProvider.userName
         : 'Usuario';
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
@@ -65,59 +69,86 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Avatar + Nombre
-                    Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 22,
-                        backgroundColor: AppColors.primaryMedium,
-                        child: Text(
-                          userName[0].toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                    // Avatar + Nombre (navegable a Settings con modal de edición abierto)
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SettingsScreen(openProfileEdit: true),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        );
+                      },
+                      child: Row(
                         children: [
-                          Text(
-                            userName,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
+                          // Avatar con foto de perfil
+                          Hero(
+                            tag: 'profile_avatar',
+                            child: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    AppColors.primaryDark,
+                                    AppColors.primaryMedium,
+                                  ],
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.primaryMedium.withValues(alpha: 0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: ClipOval(
+                                child: _buildAvatarContent(authProvider),
+                              ),
                             ),
                           ),
-                          const Text(
-                            'Ver perfil',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                userName,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                              Text(
+                                'Ver perfil',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? Colors.grey.shade400 : Colors.grey,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                  // Botón Settings
-                  IconButton(
-                    icon: Icon(
-                      Icons.settings,
-                      color: AppColors.primaryMedium,
-                      size: 28,
                     ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                      );
-                    },
-                  ),
-                ],
+                    // Botón Settings
+                    IconButton(
+                      icon: Icon(
+                        Icons.settings,
+                        color: AppColors.primaryMedium,
+                        size: 28,
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
 
@@ -194,12 +225,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               // ============================================
               FadeInLeft(
                 duration: const Duration(milliseconds: 600),
-                child: const Text(
+                child: Text(
                   '¿Qué deseas buscar?',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
               ),
@@ -257,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     // TARJETAS SECUNDARIAS (MÁS PEQUEÑAS)
                     // ==========================================
 
-                    // Compuesto
+                    // Compuesto (AZUL MARINO para diferenciarlo)
                     FadeInRight(
                       duration: const Duration(milliseconds: 600),
                       delay: const Duration(milliseconds: 100),
@@ -268,8 +299,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       icon: Icons.science_outlined,
                       gradient: LinearGradient(
                         colors: [
-                          AppColors.primaryMedium,
-                          AppColors.secondaryLight,
+                          AppColors.compoundBlue,
+                          AppColors.compoundBlue.withValues(alpha: 0.7),
                         ],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
@@ -396,9 +427,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     Center(
                       child: Text(
                         'v${AppConfig.appVersion}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Colors.grey,
+                          color: isDark ? Colors.grey.shade500 : Colors.grey,
                           fontWeight: FontWeight.w400,
                         ),
                       ),
@@ -425,6 +456,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     required IconData icon,
     required VoidCallback onTap,
   }) {
+    final isDark = Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -451,8 +484,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF00BCD4).withValues(alpha: 0.3),
-                blurRadius: 12,
+                color: isDark
+                    ? const Color(0xFF00BCD4).withValues(alpha: 0.5)
+                    : const Color(0xFF00BCD4).withValues(alpha: 0.3),
+                blurRadius: isDark ? 16 : 12,
                 offset: const Offset(0, 6),
               ),
             ],
@@ -526,6 +561,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     required Gradient gradient,
     required VoidCallback onTap,
   }) {
+    final isDark = Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -540,8 +577,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 8,
+                color: isDark
+                    ? Colors.black.withValues(alpha: 0.4)
+                    : Colors.black.withValues(alpha: 0.12),
+                blurRadius: isDark ? 12 : 8,
                 offset: const Offset(0, 3),
               ),
             ],
@@ -598,6 +637,62 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 size: 16,
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Construye el contenido del avatar (foto o inicial)
+  Widget _buildAvatarContent(AuthProvider authProvider) {
+    final userModel = authProvider.userModel;
+    final photoURL = userModel?.photoURL;
+    final displayName = userModel?.displayName ?? authProvider.userName;
+    final initial = displayName.isNotEmpty
+        ? displayName[0].toUpperCase()
+        : 'U';
+
+    if (photoURL != null && photoURL.isNotEmpty) {
+      return CachedNetworkImage(
+        imageUrl: photoURL,
+        fit: BoxFit.cover,
+        width: 44,
+        height: 44,
+        placeholder: (context, url) => Container(
+          color: AppColors.primaryMedium.withValues(alpha: 0.2),
+          child: Center(
+            child: CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 1.5,
+            ),
+          ),
+        ),
+        errorWidget: (context, url, error) => Container(
+          color: AppColors.primaryMedium.withValues(alpha: 0.2),
+          child: Center(
+            child: Text(
+              initial,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Avatar por defecto con inicial
+    return Container(
+      color: AppColors.primaryMedium.withValues(alpha: 0.2),
+      child: Center(
+        child: Text(
+          initial,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
       ),

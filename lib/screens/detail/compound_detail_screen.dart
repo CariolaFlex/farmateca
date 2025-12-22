@@ -10,6 +10,7 @@ import '../../services/favorites_service.dart';
 import '../../widgets/premium_locked_section.dart';
 import '../../providers/auth_provider.dart';
 import '../paywall_screen.dart';
+import '../home_screen.dart';
 import 'brand_detail_screen.dart';
 
 class CompoundDetailScreen extends StatefulWidget {
@@ -193,6 +194,18 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
               ),
             ),
             actions: [
+              // Botón Home
+              IconButton(
+                icon: const Icon(Icons.home_outlined, color: Colors.white),
+                onPressed: () {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const HomeScreen()),
+                    (route) => false,
+                  );
+                },
+                tooltip: 'Inicio',
+              ),
               // Botón de favorito
               _isLoadingFavorite
                   ? const Padding(

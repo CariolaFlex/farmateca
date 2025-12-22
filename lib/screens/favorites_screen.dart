@@ -7,6 +7,7 @@ import '../services/favorites_service.dart';
 import '../providers/auth_provider.dart';
 import 'detail/compound_detail_screen.dart';
 import 'detail/brand_detail_screen.dart';
+import 'home_screen.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -149,6 +150,20 @@ class _FavoritesScreenState extends State<FavoritesScreen>
         title: const Text('Mis Favoritos'),
         backgroundColor: teal.AppColors.primaryDark,
         foregroundColor: Colors.white,
+        actions: [
+          // Botón Home
+          IconButton(
+            icon: const Icon(Icons.home_outlined),
+            onPressed: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+                (route) => false,
+              );
+            },
+            tooltip: 'Inicio',
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,

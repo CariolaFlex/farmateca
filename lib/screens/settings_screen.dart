@@ -7,21 +7,39 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:animate_do/animate_do.dart';
 import '../utils/app_colors.dart';
+import '../services/storage_service.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/preferences_provider.dart';
 import 'paywall_screen.dart';
 import 'auth/login_screen.dart';
 import 'auth/terms_screen.dart';
+import 'home_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  final bool openProfileEdit;
+
+  const SettingsScreen({super.key, this.openProfileEdit = false});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Si se solicita abrir el modal de edición de perfil automáticamente
+    if (widget.openProfileEdit) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        if (authProvider.firebaseUser != null) {
+          _showEditProfileModal(authProvider);
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -39,6 +57,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: AppColors.primaryDark,
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          // Botón Home
+          IconButton(
+            icon: const Icon(Icons.home_outlined),
+            onPressed: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+                (route) => false,
+              );
+            },
+            tooltip: 'Inicio',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -1062,8 +1094,9 @@ class _EditProfileModalState extends State<EditProfileModal> {
                       Positioned(
                         bottom: 0,
                         right: 0,
-                        child: PopupMenuButton<String>(
-                          icon: Container(
+                        child: GestureDetector(
+                          onTap: () => _showPhotoOptions(context, photoURL),
+                          child: Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               color: AppColors.primaryDark,
@@ -1081,35 +1114,6 @@ class _EditProfileModalState extends State<EditProfileModal> {
                               size: 20,
                             ),
                           ),
-                          onSelected: (value) {
-                            if (value == 'camera') {
-                              _pickImage(ImageSource.camera);
-                            } else if (value == 'gallery') {
-                              _pickImage(ImageSource.gallery);
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(
-                              value: 'camera',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.camera_alt),
-                                  SizedBox(width: 12),
-                                  Text('Tomar foto'),
-                                ],
-                              ),
-                            ),
-                            const PopupMenuItem(
-                              value: 'gallery',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.photo_library),
-                                  SizedBox(width: 12),
-                                  Text('Elegir de galería'),
-                                ],
-                              ),
-                            ),
-                          ],
                         ),
                       ),
                     ],
@@ -1258,6 +1262,8 @@ class _EditProfileModalState extends State<EditProfileModal> {
 
   Future<void> _pickImage(ImageSource source) async {
     try {
+      print('📸 Iniciando selección de imagen desde: $source');
+
       final XFile? image = await _picker.pickImage(
         source: source,
         maxWidth: 1024,
@@ -1265,43 +1271,91 @@ class _EditProfileModalState extends State<EditProfileModal> {
         imageQuality: 85,
       );
 
-      if (image != null) {
-        setState(() => _isUploading = true);
+      if (image == null) {
+        print('❌ No se seleccionó ninguna imagen');
+        return;
+      }
 
-        // Subir a Firebase Storage
-        final ref = FirebaseStorage.instance
-            .ref()
-            .child('profile_photos')
-            .child('${widget.authProvider.firebaseUser!.uid}.jpg');
+      print('✅ Imagen seleccionada: ${image.path}');
 
-        await ref.putFile(File(image.path));
-        final photoURL = await ref.getDownloadURL();
+      setState(() => _isUploading = true);
 
-        // Actualizar perfil (AuthProvider notificará los cambios)
-        await widget.authProvider.updateUserProfile(
-          photoURL: photoURL,
-        );
+      final File imageFile = File(image.path);
 
+      // Verificar que el archivo existe
+      if (!await imageFile.exists()) {
+        print('❌ El archivo no existe');
         setState(() => _isUploading = false);
-
         if (mounted) {
-          // Cerrar modal para forzar rebuild del padre con nueva foto
-          Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Foto actualizada exitosamente'),
-              backgroundColor: Colors.green.shade600,
+              content: const Text('Error: El archivo no existe'),
+              backgroundColor: AppColors.alertRed,
+              behavior: SnackBarBehavior.floating,
             ),
           );
         }
+        return;
       }
-    } catch (e) {
+
+      // Usar StorageService para subir
+      final storageService = StorageService();
+      final userId = widget.authProvider.firebaseUser!.uid;
+
+      print('☁️ Subiendo imagen a Firebase Storage...');
+
+      final photoURL = await storageService.uploadProfileImage(userId, imageFile);
+
+      if (photoURL == null) {
+        print('❌ Error al subir imagen a Storage');
+        setState(() => _isUploading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Error al subir la foto. Intenta nuevamente.'),
+              backgroundColor: AppColors.alertRed,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
+      }
+
+      print('✅ Imagen subida exitosamente: $photoURL');
+
+      // Actualizar perfil (AuthProvider notificará los cambios)
+      await widget.authProvider.updateUserProfile(
+        photoURL: photoURL,
+      );
+
+      print('✅ Perfil actualizado en Firestore');
+
+      setState(() => _isUploading = false);
+
+      if (mounted) {
+        // Cerrar modal para forzar rebuild del padre con nueva foto
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Foto actualizada exitosamente'),
+            backgroundColor: AppColors.successGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      print('❌ Error en _pickImage: $e');
+      print('❌ Stack: $stackTrace');
+
       setState(() => _isUploading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error al subir foto: $e'),
-            backgroundColor: Colors.red.shade600,
+            backgroundColor: AppColors.alertRed,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
@@ -1336,6 +1390,198 @@ class _EditProfileModalState extends State<EditProfileModal> {
             SnackBar(content: Text('Error al actualizar: $e')),
           );
         }
+      }
+    }
+  }
+
+  /// Mostrar opciones de foto en bottom sheet
+  void _showPhotoOptions(BuildContext context, String? currentPhotoURL) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+
+              // Título
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Text(
+                  'Foto de perfil',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+
+              const Divider(),
+
+              // Opción: Tomar foto
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight.withValues(alpha: 0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.camera_alt,
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+                title: const Text('Tomar foto'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+
+              // Opción: Elegir de galería
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight.withValues(alpha: 0.3),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.photo_library,
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+                title: const Text('Elegir de galería'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+
+              // Opción: Eliminar foto (solo si tiene foto)
+              if (currentPhotoURL != null && currentPhotoURL.isNotEmpty)
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.alertRed.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.delete_outline,
+                      color: AppColors.alertRed,
+                    ),
+                  ),
+                  title: Text(
+                    'Eliminar foto',
+                    style: TextStyle(color: AppColors.alertRed),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _confirmDeletePhoto();
+                  },
+                ),
+
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Confirmar eliminación de foto
+  Future<void> _confirmDeletePhoto() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Eliminar foto'),
+        content: const Text('¿Estás seguro de que deseas eliminar tu foto de perfil?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancelar', style: TextStyle(color: Colors.grey.shade600)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.alertRed,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _deletePhoto();
+    }
+  }
+
+  /// Eliminar foto de perfil
+  Future<void> _deletePhoto() async {
+    setState(() => _isUploading = true);
+
+    try {
+      final userModel = widget.authProvider.userModel;
+      final currentPhotoURL = userModel?.photoURL;
+
+      // Eliminar de Storage si existe
+      if (currentPhotoURL != null && currentPhotoURL.isNotEmpty) {
+        try {
+          final ref = FirebaseStorage.instance.refFromURL(currentPhotoURL);
+          await ref.delete();
+        } catch (e) {
+          print('Error deleting photo from storage: $e');
+        }
+      }
+
+      // Eliminar referencia del perfil
+      await widget.authProvider.updateUserProfile(photoURL: null);
+
+      setState(() => _isUploading = false);
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Foto eliminada correctamente'),
+            backgroundColor: AppColors.successGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isUploading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al eliminar la foto: $e'),
+            backgroundColor: AppColors.alertRed,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }

@@ -7,6 +7,7 @@ import '../models/medication_models.dart';
 import 'detail/compound_detail_screen.dart';
 import 'detail/brand_detail_screen.dart';
 import 'detail/family_detail_screen.dart';
+import 'home_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   final String? searchType; // 'compuesto', 'marca', o null para búsqueda global
@@ -155,6 +156,20 @@ class _SearchScreenState extends State<SearchScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          // Botón Home
+          IconButton(
+            icon: const Icon(Icons.home_outlined, color: Colors.white),
+            onPressed: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+                (route) => false,
+              );
+            },
+            tooltip: 'Inicio',
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -398,12 +413,16 @@ class _SearchScreenState extends State<SearchScreen> {
           decoration: BoxDecoration(
             color: isComingSoon
                 ? Colors.grey.shade300
-                : teal.AppColors.primaryLight.withValues(alpha: 0.3),
+                : (isCompuesto
+                    ? teal.AppColors.compoundBlue.withValues(alpha: 0.15)
+                    : teal.AppColors.primaryLight.withValues(alpha: 0.3)),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
-            isCompuesto ? Icons.medication : Icons.local_pharmacy,
-            color: isComingSoon ? Colors.grey.shade500 : teal.AppColors.primaryDark,
+            isCompuesto ? Icons.science : Icons.local_pharmacy,
+            color: isComingSoon
+                ? Colors.grey.shade500
+                : (isCompuesto ? teal.AppColors.compoundBlue : teal.AppColors.primaryDark),
             size: 28,
           ),
         ),

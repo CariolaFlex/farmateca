@@ -6,6 +6,7 @@ import '../services/database_helper.dart';
 import '../models/medication_models.dart';
 import 'detail/brand_detail_screen.dart';
 import 'detail/laboratory_detail_screen.dart';
+import 'home_screen.dart';
 
 class BrandSearchScreen extends StatefulWidget {
   const BrandSearchScreen({super.key});
@@ -158,6 +159,20 @@ class _BrandSearchScreenState extends State<BrandSearchScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          // Botón Home
+          IconButton(
+            icon: const Icon(Icons.home_outlined, color: Colors.white),
+            onPressed: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+                (route) => false,
+              );
+            },
+            tooltip: 'Inicio',
+          ),
+        ],
       ),
       body: Column(
         children: [

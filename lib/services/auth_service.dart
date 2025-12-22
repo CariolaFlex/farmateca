@@ -187,6 +187,36 @@ class AuthService {
   }
 
   // ==========================================
+  // ACTUALIZAR FOTO DE PERFIL
+  // ==========================================
+  Future<bool> updateUserPhoto(String userId, String photoUrl) async {
+    try {
+      await _firestore.collection('users').doc(userId).update({
+        'photoURL': photoUrl,
+      });
+      return true;
+    } catch (e) {
+      print('Error updating user photo: $e');
+      return false;
+    }
+  }
+
+  // ==========================================
+  // ELIMINAR FOTO DE PERFIL
+  // ==========================================
+  Future<bool> deleteUserPhoto(String userId) async {
+    try {
+      await _firestore.collection('users').doc(userId).update({
+        'photoURL': FieldValue.delete(),
+      });
+      return true;
+    } catch (e) {
+      print('Error deleting user photo: $e');
+      return false;
+    }
+  }
+
+  // ==========================================
   // HELPERS
   // ==========================================
 

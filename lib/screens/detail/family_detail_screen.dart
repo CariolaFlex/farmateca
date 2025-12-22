@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import '../../models/medication_models.dart';
 import '../../utils/app_colors.dart';
+import '../home_screen.dart';
 import 'compound_detail_screen.dart';
 
 class FamilyDetailScreen extends StatelessWidget {
@@ -38,6 +39,20 @@ class FamilyDetailScreen extends StatelessWidget {
             ),
           ],
         ),
+        actions: [
+          // Botón Home
+          IconButton(
+            icon: const Icon(Icons.home_outlined),
+            onPressed: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+                (route) => false,
+              );
+            },
+            tooltip: 'Inicio',
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
