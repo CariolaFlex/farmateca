@@ -197,6 +197,8 @@ class _PaywallScreenState extends State<PaywallScreen>
                 color: Colors.white.withValues(alpha: 0.9),
                 height: 1.4,
               ),
+              maxLines: 3,
+              overflow: TextOverflow.visible,
             ),
           ],
         ),
@@ -281,6 +283,8 @@ class _PaywallScreenState extends State<PaywallScreen>
                   color: Colors.grey.shade700,
                   height: 1.4,
                 ),
+                maxLines: 3,
+                overflow: TextOverflow.visible,
               ),
 
               const SizedBox(height: 16),
@@ -506,12 +510,16 @@ class _PaywallScreenState extends State<PaywallScreen>
               ),
             ),
             const SizedBox(width: 10),
-            Text(
-              'Más de 1,000 profesionales confían en Farmateca',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey.shade700,
+            Flexible(
+              child: Text(
+                'Más de 1,000 profesionales confían en Farmateca',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey.shade700,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

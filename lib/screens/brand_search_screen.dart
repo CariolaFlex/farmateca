@@ -428,6 +428,8 @@ class _BrandSearchScreenState extends State<BrandSearchScreen> {
             fontSize: 16,
             color: isComingSoon ? Colors.grey.shade700 : Colors.black87,
           ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -440,6 +442,8 @@ class _BrandSearchScreenState extends State<BrandSearchScreen> {
                     : Colors.grey.shade600,
                 fontSize: 13,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
             // Badge PRÓXIMAMENTE o tipo de marca
@@ -880,6 +884,8 @@ class _BrandSearchScreenState extends State<BrandSearchScreen> {
         title: Text(
           laboratory['nombre'] as String,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
           '${laboratory['cantidad']} marca${(laboratory['cantidad'] as int) != 1 ? 's' : ''}',

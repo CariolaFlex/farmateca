@@ -53,6 +53,11 @@ class PreferencesProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Getter para textScaleFactor global
+  double get textScaleFactor {
+    return _preferences.fontSize / 16.0;
+  }
+
   // Obtener TextTheme personalizado
   TextTheme getTextTheme(TextTheme base) {
     final double scaleFactor = _preferences.fontSize / 16.0;

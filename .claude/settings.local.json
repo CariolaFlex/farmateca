@@ -14,7 +14,8 @@
       "Bash(flutter build:*)",
       "Bash(flutter pub get:*)",
       "Bash(findstr:*)",
-      "Bash(flutter clean:*)"
+      "Bash(flutter clean:*)",
+      "Bash(Select-String -Pattern \"warning|issues found\")"
     ],
     "deny": [],
     "ask": []

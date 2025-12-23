@@ -49,6 +49,8 @@ class _LaboratoryDetailScreenState extends State<LaboratoryDetailScreen> {
             Text(
               widget.laboratoryName,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
             Text(
               '${widget.brands.length} marca${widget.brands.length != 1 ? 's' : ''}',

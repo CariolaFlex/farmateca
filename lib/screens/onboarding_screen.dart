@@ -283,26 +283,31 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
             // Título
             Text(
-              'Funciona Sin Internet',
+              'Disponibilidad Total 100% Offline',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: isDark ? Colors.white : AppColors.primaryBlue,
               ),
               textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.visible,
             ),
             const SizedBox(height: 20),
 
             // Descripción
             Text(
-              'Accede a toda la información farmacológica sin conexión. '
-              'Base de datos local SQLite con 150 compuestos y 553 marcas.',
+              'Accede a tu biblioteca farmacológica sin depender de la señal. '
+              'Consulta al instante más de 200 compuestos y 2.500 marcas y '
+              'genéricos directamente en tu dispositivo.',
               style: TextStyle(
                 fontSize: 16,
                 color: isDark ? Colors.white70 : Colors.grey.shade700,
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
+              maxLines: 5,
+              overflow: TextOverflow.visible,
             ),
           ],
         ),
@@ -362,6 +367,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 color: isDark ? Colors.white : AppColors.successGreen,
               ),
               textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.visible,
             ),
             const SizedBox(height: 20),
 
@@ -375,6 +382,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
+              maxLines: 4,
+              overflow: TextOverflow.visible,
             ),
           ],
         ),

@@ -169,6 +169,8 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
               background: Container(
                 decoration: const BoxDecoration(

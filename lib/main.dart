@@ -69,6 +69,15 @@ class MyApp extends StatelessWidget {
             theme: customLightTheme,
             darkTheme: customDarkTheme,
             themeMode: themeProvider.themeMode,
+            // Aplicar textScaler global a toda la app
+            builder: (context, child) {
+              return MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  textScaler: TextScaler.linear(prefsProvider.textScaleFactor),
+                ),
+                child: child!,
+              );
+            },
             // Si onboarding completado -> SplashScreen (flujo normal)
             // Si no -> OnboardingScreen (primera vez)
             home: hasCompletedOnboarding

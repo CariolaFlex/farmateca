@@ -122,6 +122,8 @@ class FamilyDetailScreen extends StatelessWidget {
                 fontWeight: FontWeight.bold,
                 color: AppColors.textPrimary,
               ),
+              maxLines: 3,
+              overflow: TextOverflow.visible,
             ),
             const SizedBox(height: 8),
             const Text(
@@ -199,6 +201,8 @@ class FamilyDetailScreen extends StatelessWidget {
                             ? Colors.grey.shade700
                             : AppColors.textPrimary,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     if (isComingSoon) ...[
                       const SizedBox(height: 6),
