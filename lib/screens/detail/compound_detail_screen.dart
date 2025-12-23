@@ -162,39 +162,47 @@ class _CompoundDetailScreenState extends State<CompoundDetailScreen> {
             pinned: true,
             backgroundColor: teal.AppColors.primaryDark,
             flexibleSpace: FlexibleSpaceBar(
-              title: Text(
-                compuesto.pa,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              centerTitle: true,
+              titlePadding: const EdgeInsets.only(bottom: 16),
+              title: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Ícono central
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(51),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.science,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Título del compuesto
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      compuesto.pa,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: true,
+                    ),
+                  ),
+                ],
               ),
               background: Container(
                 decoration: const BoxDecoration(
                   gradient: teal.AppColors.primaryGradient,
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 40),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(51),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.science,
-                          size: 48,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               ),
             ),
