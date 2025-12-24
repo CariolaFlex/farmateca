@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyAHIWHrwCqnSmm0ue0UL6HkkcfGhfJDM8Q</string>
+	<string>AIzaSyCXdFGHfxBll2NgR4oyc_0Q32kUs-OCwf8</string>
 	<key>GCM_SENDER_ID</key>
-	<string>602911842470</string>
+	<string>54136909728</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>cl.vectium.farmateca</string>
 	<key>PROJECT_ID</key>
-	<string>farmateca-app</string>
+	<string>farmateca</string>
 	<key>STORAGE_BUCKET</key>
-	<string>farmateca-app.firebasestorage.app</string>
+	<string>farmateca.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:602911842470:ios:d2d4dd47f8a27359709467</string>
+	<string>1:54136909728:ios:458f1c1d424c24a41c3ec5</string>
 </dict>
 </plist>

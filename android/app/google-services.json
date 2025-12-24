@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "602911842470",
-    "project_id": "farmateca-app",
-    "storage_bucket": "farmateca-app.firebasestorage.app"
+    "project_number": "54136909728",
+    "project_id": "farmateca",
+    "storage_bucket": "farmateca.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:602911842470:android:56ece7bb2f503a9e709467",
+        "mobilesdk_app_id": "1:54136909728:android:64eb7cbb26e59dd71c3ec5",
         "android_client_info": {
           "package_name": "cl.vectium.farmateca"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBXAolKj_w5oVou3qZa34PYv9lKrawLQVo"
+          "current_key": "AIzaSyCJkICdFSC5D_HG4t7SJKguYfax_Kb1lmw"
         }
       ],
       "services": {
