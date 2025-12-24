@@ -12,7 +12,20 @@
           "package_name": "cl.vectium.farmateca"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "54136909728-camftvthlmeek011u8gub61ft72hg0f9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "cl.vectium.farmateca",
+            "certificate_hash": "ff46db31772fdbe07f54a8d1756184ae1b85adce"
+          }
+        },
+        {
+          "client_id": "54136909728-qi3c4t4a6c31oifn9pllft152ib7dup8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCJkICdFSC5D_HG4t7SJKguYfax_Kb1lmw"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "54136909728-qi3c4t4a6c31oifn9pllft152ib7dup8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "54136909728-svjmnpudv043cgetqpfvn8jtf0ka47o5.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "cl.vectium.farmateca"
+              }
+            }
+          ]
         }
       }
     }

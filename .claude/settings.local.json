@@ -15,7 +15,9 @@
       "Bash(flutter pub get:*)",
       "Bash(findstr:*)",
       "Bash(flutter clean:*)",
-      "Bash(Select-String -Pattern \"warning|issues found\")"
+      "Bash(Select-String -Pattern \"warning|issues found\")",
+      "Bash(git push)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
