@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'firebase_options.dart';
 import 'config/app_config.dart';
 import 'providers/auth_provider.dart';
 import 'providers/onboarding_provider.dart';
@@ -18,8 +19,10 @@ import 'test_json_parse.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Inicializar Firebase
-  await Firebase.initializeApp();
+  // 1. Inicializar Firebase con opciones de Vectium SpA
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // 2. Verificar si onboarding fue completado
   final prefs = await SharedPreferences.getInstance();

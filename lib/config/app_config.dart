@@ -20,7 +20,7 @@ class AppConfig {
   static const String bundleIdIOS = 'cl.vectium.farmateca';
 
   // === Firebase ===
-  static const String firebaseProjectId = 'farmateca-app';
+  static const String firebaseProjectId = 'farmateca';
 
   // === RevenueCat (compras in-app) ===
   static const String revenueCatApiKey = '';
