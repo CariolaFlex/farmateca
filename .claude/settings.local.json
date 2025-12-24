@@ -17,7 +17,12 @@
       "Bash(flutter clean:*)",
       "Bash(Select-String -Pattern \"warning|issues found\")",
       "Bash(git push)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(git push:*)",
+      "Bash(flutterfire:*)",
+      "Bash(dart pub global activate:*)",
+      "Bash(C:/Users/andre/AppData/Local/Pub/Cache/bin/flutterfire --version)",
+      "Bash(dart pub global run flutterfire_cli:flutterfire:*)"
     ],
     "deny": [],
     "ask": []
