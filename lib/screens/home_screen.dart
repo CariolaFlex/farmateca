@@ -296,6 +296,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               // ============================================
               Expanded(
                 child: ListView(
+                  physics: const ClampingScrollPhysics(),
                   children: [
                     // ==========================================
                     // TARJETA PRINCIPAL: Buscar (MÁS GRANDE)

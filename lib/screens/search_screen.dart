@@ -359,7 +359,8 @@ class _SearchScreenState extends State<SearchScreen> {
                               _performSearch(_searchController.text);
                             },
                             child: ListView.builder(
-                              padding: const EdgeInsets.all(16),
+                              physics: const ClampingScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                               itemCount: _filteredFamilies.length,
                               itemBuilder: (context, index) {
                                 final family = _filteredFamilies[index];
@@ -378,7 +379,8 @@ class _SearchScreenState extends State<SearchScreen> {
                               }
                             },
                             child: ListView.builder(
-                              padding: const EdgeInsets.all(16),
+                              physics: const ClampingScrollPhysics(),
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                               itemCount: _results.length,
                               itemBuilder: (context, index) {
                                 final item = _results[index];

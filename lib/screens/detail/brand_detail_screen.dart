@@ -163,50 +163,64 @@ class _BrandDetailScreenState extends State<BrandDetailScreen> {
             expandedHeight: 180,
             pinned: true,
             backgroundColor: teal.AppColors.primaryDark,
-            flexibleSpace: FlexibleSpaceBar(
-              centerTitle: true,
-              titlePadding: const EdgeInsets.only(bottom: 16),
-              title: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Ícono central
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(51),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.local_pharmacy,
-                      color: Colors.white,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // Título de la marca
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: Text(
-                      marca.ma,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+            flexibleSpace: LayoutBuilder(
+              builder: (context, constraints) {
+                // Calcular el progreso del colapso (1 = expandido, 0 = colapsado)
+                final expandRatio = ((constraints.maxHeight - kToolbarHeight) /
+                        (180 - kToolbarHeight))
+                    .clamp(0.0, 1.0);
+
+                return FlexibleSpaceBar(
+                  centerTitle: true,
+                  titlePadding: const EdgeInsets.only(bottom: 16),
+                  title: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      // Ícono central - solo visible cuando está expandido
+                      if (expandRatio > 0.3)
+                        Opacity(
+                          opacity: expandRatio,
+                          child: Container(
+                            width: 40 * expandRatio,
+                            height: 40 * expandRatio,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withAlpha(51),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.local_pharmacy,
+                              color: Colors.white,
+                              size: 22 * expandRatio,
+                            ),
+                          ),
+                        ),
+                      if (expandRatio > 0.3) SizedBox(height: 8 * expandRatio),
+                      // Título de la marca
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Text(
+                          marca.ma,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14 + (2 * expandRatio),
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                          maxLines: expandRatio > 0.5 ? 2 : 1,
+                          overflow: TextOverflow.ellipsis,
+                          softWrap: true,
+                        ),
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      softWrap: true,
+                    ],
+                  ),
+                  background: Container(
+                    decoration: const BoxDecoration(
+                      gradient: teal.AppColors.primaryGradient,
                     ),
                   ),
-                ],
-              ),
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: teal.AppColors.primaryGradient,
-                ),
-              ),
+                );
+              },
             ),
             actions: [
               // Botón Home

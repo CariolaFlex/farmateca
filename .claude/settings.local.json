@@ -22,7 +22,9 @@
       "Bash(flutterfire:*)",
       "Bash(dart pub global activate:*)",
       "Bash(C:/Users/andre/AppData/Local/Pub/Cache/bin/flutterfire --version)",
-      "Bash(dart pub global run flutterfire_cli:flutterfire:*)"
+      "Bash(dart pub global run flutterfire_cli:flutterfire:*)",
+      "Bash(find:*)",
+      "Bash(flutter test:*)"
     ],
     "deny": [],
     "ask": []

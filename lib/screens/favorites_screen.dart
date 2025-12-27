@@ -256,7 +256,8 @@ class _FavoritesScreenState extends State<FavoritesScreen>
       color: teal.AppColors.primaryDark,
       onRefresh: _loadFavorites,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        physics: const ClampingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         itemCount: _favoriteCompounds.length,
         itemBuilder: (context, index) {
           final compound = _favoriteCompounds[index];
@@ -275,7 +276,8 @@ class _FavoritesScreenState extends State<FavoritesScreen>
       color: teal.AppColors.primaryDark,
       onRefresh: _loadFavorites,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        physics: const ClampingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         itemCount: _favoriteBrands.length,
         itemBuilder: (context, index) {
           final brand = _favoriteBrands[index];

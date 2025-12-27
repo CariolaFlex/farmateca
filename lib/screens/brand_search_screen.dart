@@ -339,7 +339,8 @@ class _BrandSearchScreenState extends State<BrandSearchScreen> {
                                   _performSearch();
                                 },
                                 child: ListView.builder(
-                                  padding: const EdgeInsets.all(16),
+                                  physics: const ClampingScrollPhysics(),
+                                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                                   itemCount: _filteredLaboratories.length,
                                   itemBuilder: (context, index) {
                                     final lab = _filteredLaboratories[index];
@@ -358,7 +359,8 @@ class _BrandSearchScreenState extends State<BrandSearchScreen> {
                                   _performSearch();
                                 },
                                 child: ListView.builder(
-                                  padding: const EdgeInsets.all(16),
+                                  physics: const ClampingScrollPhysics(),
+                                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                                   itemCount: _filteredBrands.length,
                                   itemBuilder: (context, index) {
                                     final marca = _filteredBrands[index];
