@@ -206,8 +206,20 @@ class UserModel {
     );
   }
 
-  /// Nombre para mostrar (alias si existe, sino nombre)
-  String get displayName => alias?.isNotEmpty == true ? alias! : nombre;
+  /// Nombre para mostrar en la UI.
+  /// Prioridad: 1) alias (si existe y no está vacío), 2) nombre, 3) 'Usuario' como fallback
+  String get displayName {
+    // Primero verificar alias
+    if (alias != null && alias!.trim().isNotEmpty) {
+      return alias!.trim();
+    }
+    // Luego verificar nombre
+    if (nombre.trim().isNotEmpty) {
+      return nombre.trim();
+    }
+    // Fallback para UI (no se guarda en Firestore)
+    return 'Usuario';
+  }
 }
 
 class UserPreferences {

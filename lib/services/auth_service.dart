@@ -78,10 +78,17 @@ class AuthService {
       );
 
       if (credential.user != null) {
-        // Actualizar última sesión
-        await _firestore.collection('users').doc(credential.user!.uid).update({
-          'ultima_sesion': Timestamp.fromDate(DateTime.now()),
-        });
+        // Actualizar última sesión (ignorar error si falla, no es crítico)
+        try {
+          await _firestore.collection('users').doc(credential.user!.uid).update({
+            'ultima_sesion': Timestamp.fromDate(DateTime.now()),
+          });
+        } catch (_) {
+          // Ignorar error de actualización de última sesión
+        }
+
+        // Guardar estado de "Recordarme" en preferencias locales
+        await setRememberMe(rememberMe);
 
         // Guardar email si "recordarme" está activo
         if (rememberMe) {
@@ -96,7 +103,14 @@ class AuthService {
     } on FirebaseAuthException catch (e) {
       return AuthResult.error(_getErrorMessage(e.code));
     } catch (e) {
-      return AuthResult.error('Error inesperado: $e');
+      // Capturar cualquier otro error (incluyendo FirebaseException genérico)
+      final errorStr = e.toString().toLowerCase();
+      if (errorStr.contains('invalid-credential') ||
+          errorStr.contains('wrong-password') ||
+          errorStr.contains('user-not-found')) {
+        return AuthResult.error('Correo o contraseña incorrectos');
+      }
+      return AuthResult.error('Error de conexión. Verifica tu internet.');
     }
   }
 
@@ -118,6 +132,8 @@ class AuthService {
   // CERRAR SESIÓN
   // ==========================================
   Future<void> logout() async {
+    // Limpiar flag de "Recordarme" para forzar login en próxima apertura
+    await clearRememberMe();
     await _auth.signOut();
   }
 
@@ -228,6 +244,28 @@ class AuthService {
   Future<String?> getLastEmail() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(PrefsKeys.lastEmail);
+  }
+
+  // ==========================================
+  // RECORDARME (MANTENER SESIÓN)
+  // ==========================================
+
+  /// Guarda el estado de "Recordarme" en preferencias locales
+  Future<void> setRememberMe(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(PrefsKeys.rememberMe, value);
+  }
+
+  /// Obtiene el estado de "Recordarme" desde preferencias locales
+  Future<bool> getRememberMe() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(PrefsKeys.rememberMe) ?? false;
+  }
+
+  /// Limpia el flag de "Recordarme" (usado en logout)
+  Future<void> clearRememberMe() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(PrefsKeys.rememberMe);
   }
 
   String _getErrorMessage(String code) {

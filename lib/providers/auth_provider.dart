@@ -24,7 +24,8 @@ class AuthProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   AuthStatus get status => _status;
   bool get isAuthenticated => _firebaseUser != null;
-  String get userName => _userModel?.nombre ?? _firebaseUser?.displayName ?? '';
+  /// Nombre para mostrar: usa displayName del UserModel (alias > nombre > 'Usuario')
+  String get userName => _userModel?.displayName ?? _firebaseUser?.displayName ?? 'Usuario';
   String get userEmail => _userModel?.email ?? _firebaseUser?.email ?? '';
 
   /// Indica si el modo desarrollador premium está activo (para testing)
@@ -205,8 +206,11 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Actualiza el perfil del usuario en Firestore
+  /// Los campos que se pasan como String vacío '' se borran explícitamente
+  /// Los campos que se pasan como null no se modifican
   Future<void> updateUserProfile({
     String? photoURL,
+    String? nombre,
     String? alias,
     String? nivel,
     String? area,
@@ -218,8 +222,29 @@ class AuthProvider extends ChangeNotifier {
         'ultima_sesion': Timestamp.now(),
       };
 
-      if (photoURL != null) updates['photoURL'] = photoURL;
-      if (alias != null) updates['alias'] = alias;
+      // Para photoURL, null significa "no cambiar", cadena vacía significa "borrar"
+      if (photoURL != null) {
+        if (photoURL.isEmpty) {
+          updates['photoURL'] = FieldValue.delete();
+        } else {
+          updates['photoURL'] = photoURL;
+        }
+      }
+
+      // Nombre: si se proporciona, actualizar
+      if (nombre != null && nombre.isNotEmpty) {
+        updates['nombre'] = nombre;
+      }
+
+      // Alias: si se proporciona, actualizar (vacío = borrar)
+      if (alias != null) {
+        if (alias.isEmpty) {
+          updates['alias'] = FieldValue.delete();
+        } else {
+          updates['alias'] = alias;
+        }
+      }
+
       if (nivel != null) updates['nivel'] = nivel;
       if (area != null) updates['area'] = area;
 
@@ -230,17 +255,22 @@ class AuthProvider extends ChangeNotifier {
           .update(updates);
 
       // 2. Actualizar Firebase Auth si hay photoURL
-      if (photoURL != null) {
+      if (photoURL != null && photoURL.isNotEmpty) {
         await _firebaseUser!.updatePhotoURL(photoURL);
-        // Recargar usuario para obtener cambios
+        await _firebaseUser!.reload();
+        _firebaseUser = FirebaseAuth.instance.currentUser;
+      } else if (photoURL != null && photoURL.isEmpty) {
+        // Borrar foto de Firebase Auth
+        await _firebaseUser!.updatePhotoURL(null);
         await _firebaseUser!.reload();
         _firebaseUser = FirebaseAuth.instance.currentUser;
       }
 
       // 3. Actualizar modelo local
       _userModel = _userModel!.copyWith(
-        photoURL: photoURL ?? _userModel!.photoURL,
-        alias: alias ?? _userModel!.alias,
+        photoURL: photoURL != null ? (photoURL.isEmpty ? null : photoURL) : _userModel!.photoURL,
+        nombre: nombre != null && nombre.isNotEmpty ? nombre : _userModel!.nombre,
+        alias: alias != null ? (alias.isEmpty ? null : alias) : _userModel!.alias,
         nivel: nivel ?? _userModel!.nivel,
         area: area ?? _userModel!.area,
         ultimaSesion: DateTime.now(),
@@ -249,7 +279,7 @@ class AuthProvider extends ChangeNotifier {
       // 4. Notificar cambios a todos los listeners
       notifyListeners();
 
-      debugPrint('✅ Perfil actualizado: photoURL=$photoURL, alias=$alias');
+      debugPrint('✅ Perfil actualizado: nombre=$nombre, alias=$alias, nivel=$nivel, area=$area');
     } catch (e) {
       debugPrint('❌ Error updating profile: $e');
       rethrow;

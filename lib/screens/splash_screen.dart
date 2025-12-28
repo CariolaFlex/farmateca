@@ -1,11 +1,14 @@
 // lib/screens/splash_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 
 import '../config/app_config.dart';
+import '../services/auth_service.dart';
 import '../utils/app_colors.dart';
 import 'home_screen.dart';
+import 'auth/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -75,12 +78,36 @@ class _SplashScreenState extends State<SplashScreen>
       debugPrint('🎨 SPLASH SCREEN: Inicializando app...');
     }
 
-    // Por ahora ir directo a Home (auth se implementará después)
-    // TODO: Implementar flujo completo de autenticación en FASE 3
+    // Verificar autenticación y estado de "Recordarme"
+    final authService = AuthService();
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final rememberMe = await authService.getRememberMe();
+
+    if (AppConfig.debugMode) {
+      debugPrint('🔐 Usuario actual: ${currentUser?.email ?? "ninguno"}');
+      debugPrint('🔐 Recordarme: $rememberMe');
+    }
+
+    // Decidir destino
+    Widget destination;
+
+    if (currentUser != null && rememberMe) {
+      // Usuario autenticado Y "Recordarme" activo → ir a Home
+      destination = const HomeScreen();
+    } else if (currentUser != null && !rememberMe) {
+      // Usuario autenticado pero "Recordarme" desactivado → cerrar sesión e ir a Login
+      await authService.logout();
+      destination = const LoginScreen();
+    } else {
+      // Sin usuario autenticado → ir a Login
+      destination = const LoginScreen();
+    }
+
+    if (!mounted) return;
+
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const HomeScreen(),
+        pageBuilder: (context, animation, secondaryAnimation) => destination,
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },

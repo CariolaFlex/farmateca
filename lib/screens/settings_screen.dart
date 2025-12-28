@@ -1468,6 +1468,7 @@ class EditProfileModal extends StatefulWidget {
 
 class _EditProfileModalState extends State<EditProfileModal> {
   final _formKey = GlobalKey<FormState>();
+  late TextEditingController _nombreController;
   late TextEditingController _aliasController;
   String? _selectedNivel;
   String? _selectedArea;
@@ -1502,13 +1503,16 @@ class _EditProfileModalState extends State<EditProfileModal> {
   void initState() {
     super.initState();
     final userModel = widget.authProvider.userModel;
-    _aliasController = TextEditingController(text: userModel?.alias);
+    // Inicializar con valores actuales del modelo
+    _nombreController = TextEditingController(text: userModel?.nombre ?? '');
+    _aliasController = TextEditingController(text: userModel?.alias ?? '');
     _selectedNivel = userModel?.nivel;
     _selectedArea = userModel?.area;
   }
 
   @override
   void dispose() {
+    _nombreController.dispose();
     _aliasController.dispose();
     super.dispose();
   }
@@ -1626,12 +1630,46 @@ class _EditProfileModalState extends State<EditProfileModal> {
 
                 const SizedBox(height: 24),
 
-                // ALIAS
+                // NOMBRE COMPLETO
+                TextFormField(
+                  controller: _nombreController,
+                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                  decoration: InputDecoration(
+                    labelText: 'Nombre Completo',
+                    labelStyle:
+                        TextStyle(color: isDark ? Colors.white70 : Colors.black54),
+                    hintText: 'Tu nombre real',
+                    hintStyle:
+                        TextStyle(color: isDark ? Colors.white38 : Colors.black38),
+                    prefixIcon: Icon(
+                      Icons.badge_outlined,
+                      color: AppColors.primaryDark,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide:
+                          BorderSide(color: AppColors.primaryDark, width: 2),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'El nombre es requerido';
+                    }
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                // ALIAS (OPCIONAL)
                 TextFormField(
                   controller: _aliasController,
                   style: TextStyle(color: isDark ? Colors.white : Colors.black87),
                   decoration: InputDecoration(
-                    labelText: 'Alias o Apodo',
+                    labelText: 'Alias o Apodo (opcional)',
                     labelStyle:
                         TextStyle(color: isDark ? Colors.white70 : Colors.black54),
                     hintText: 'Cómo quieres que te llamemos',
@@ -1871,10 +1909,12 @@ class _EditProfileModalState extends State<EditProfileModal> {
       try {
         setState(() => _isUploading = true);
 
+        // Guardar todos los campos del perfil
         await widget.authProvider.updateUserProfile(
-          alias: _aliasController.text.trim().isNotEmpty
-              ? _aliasController.text.trim()
-              : null,
+          nombre: _nombreController.text.trim(),
+          alias: _aliasController.text.trim().isEmpty
+              ? '' // Cadena vacía para borrar el alias
+              : _aliasController.text.trim(),
           nivel: _selectedNivel,
           area: _selectedArea,
         );
@@ -1884,14 +1924,22 @@ class _EditProfileModalState extends State<EditProfileModal> {
         if (mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Perfil actualizado exitosamente')),
+            SnackBar(
+              content: const Text('Perfil actualizado exitosamente'),
+              backgroundColor: AppColors.successGreen,
+              behavior: SnackBarBehavior.floating,
+            ),
           );
         }
       } catch (e) {
         setState(() => _isUploading = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error al actualizar: $e')),
+            SnackBar(
+              content: Text('Error al actualizar: $e'),
+              backgroundColor: AppColors.alertRed,
+              behavior: SnackBarBehavior.floating,
+            ),
           );
         }
       }

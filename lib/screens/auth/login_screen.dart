@@ -48,25 +48,36 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    // 1. Validar formulario
     if (!_formKey.currentState!.validate()) return;
+
+    // 2. Obtener provider y limpiar errores previos
     final authProvider = context.read<AuthProvider>();
     authProvider.clearError();
+
+    // 3. Intentar login
     final success = await authProvider.loginWithEmail(
       email: Validators.sanitizeEmail(_emailController.text),
       password: _passwordController.text,
       rememberMe: _rememberMe,
     );
-    if (mounted) {
-      if (success) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
-      } else {
-        CustomSnackbar.showError(
-          context,
-          authProvider.errorMessage ?? 'Error al iniciar sesión',
-        );
-      }
+
+    // 4. Verificar que el widget sigue montado antes de usar context
+    if (!mounted) return;
+
+    // 5. Manejar resultado
+    if (success) {
+      // Login exitoso: navegar a Home y limpiar stack de navegación
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        (route) => false, // Elimina todas las rutas anteriores
+      );
+    } else {
+      // Login fallido: mostrar error
+      CustomSnackbar.showError(
+        context,
+        authProvider.errorMessage ?? 'Error al iniciar sesión',
+      );
     }
   }
 

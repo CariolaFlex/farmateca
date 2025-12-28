@@ -68,12 +68,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    // Usar context.watch para suscribirse a cambios y reconstruir cuando el perfil se actualice
+    final authProvider = context.watch<AuthProvider>();
+    final themeProvider = context.watch<ThemeProvider>();
     final isDark = themeProvider.isDarkMode;
-    final userName = authProvider.userName.isNotEmpty
-        ? authProvider.userName
-        : 'Usuario';
+    // userName ya incluye fallback a 'Usuario' en displayName
+    final userName = authProvider.userName;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
